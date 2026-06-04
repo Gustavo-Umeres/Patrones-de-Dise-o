@@ -1,65 +1,149 @@
-import Image from "next/image";
+"use client";
+
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { BookOpen, Code, Database, LayoutGrid, ArrowRight, Calendar, Heart, ShieldAlert } from "lucide-react";
 
 export default function Home() {
+  // Configuración de animación
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.15 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { type: "spring" as const, stiffness: 100 } }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-12 py-4"
+    >
+      {/* Hero Section */}
+      <motion.div variants={itemVariants} className="text-left space-y-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+          Catálogo Oficial GoF
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 dark:from-white dark:via-indigo-200 dark:to-slate-200 bg-clip-text text-transparent">
+          Patrones de Diseño de Comportamiento
+        </h1>
+        <p className="text-xl text-slate-500 dark:text-indigo-300 font-semibold tracking-wide">
+          Behavioral Design Patterns — Catálogo GoF (Gang of Four)
+        </p>
+        <p className="text-slate-650 dark:text-slate-400 max-w-3xl text-base leading-relaxed">
+          Los patrones de comportamiento se centran en los algoritmos y la asignación de responsabilidades entre objetos. No solo describen patrones de objetos o clases, sino también los patrones de comunicación entre ellos. Estos patrones caracterizan flujos de control complejos que son difíciles de seguir en tiempo de ejecución.
+        </p>
+        <div className="pt-4">
+          <Link 
+            href="/introduccion" 
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md hover:shadow-indigo-500/20 active:scale-95 transition-all"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Comenzar Aprendizaje
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
-      </main>
-    </div>
+      </motion.div>
+
+      {/* Tarjetas Estadísticas */}
+      <motion.div 
+        variants={itemVariants} 
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        <div className="p-5 rounded-xl border border-slate-200/60 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/30 backdrop-blur-sm shadow-sm flex flex-col justify-between hover:border-indigo-500/30 transition-all duration-300">
+          <div className="p-2.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg w-fit">
+            <LayoutGrid className="h-5 w-5" />
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-extrabold text-slate-900 dark:text-white">11</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Patrones de Comportamiento</div>
+          </div>
+        </div>
+
+        <div className="p-5 rounded-xl border border-slate-200/60 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/30 backdrop-blur-sm shadow-sm flex flex-col justify-between hover:border-indigo-500/30 transition-all duration-300">
+          <div className="p-2.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg w-fit">
+            <BookOpen className="h-5 w-5" />
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-extrabold text-slate-900 dark:text-white">GoF</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Catálogo Estándar</div>
+          </div>
+        </div>
+
+        <div className="p-5 rounded-xl border border-slate-200/60 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/30 backdrop-blur-sm shadow-sm flex flex-col justify-between hover:border-indigo-500/30 transition-all duration-300">
+          <div className="p-2.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg w-fit">
+            <Database className="h-5 w-5" />
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-extrabold text-slate-900 dark:text-white">Real</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Casos de Uso en la Industria</div>
+          </div>
+        </div>
+
+        <div className="p-5 rounded-xl border border-slate-200/60 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/30 backdrop-blur-sm shadow-sm flex flex-col justify-between hover:border-indigo-500/30 transition-all duration-300">
+          <div className="p-2.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg w-fit">
+            <Code className="h-5 w-5" />
+          </div>
+          <div className="mt-4">
+            <div className="text-3xl font-extrabold text-slate-900 dark:text-white">Java</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Código Académico</div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Línea de Tiempo */}
+      <motion.div variants={itemVariants} className="space-y-6">
+        <h2 className="text-2xl font-bold text-slate-950 dark:text-slate-200">
+          Línea de Tiempo del Software y Patrones
+        </h2>
+        
+        <div className="relative border-l border-slate-200 dark:border-slate-800 ml-4 pl-6 space-y-8">
+          <div className="relative">
+            <div className="absolute -left-[31px] top-1.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-full p-1 border-4 border-white dark:border-slate-950">
+              <Calendar className="h-4 w-4" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">1994</span>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">Publicación del Libro Oficial</h3>
+              <p className="text-sm text-slate-550 dark:text-slate-400 leading-relaxed">
+                Erich Gamma, Richard Helm, Ralph Johnson y John Vlissides (conocidos como la <strong>Gang of Four</strong> o <strong>GoF</strong>) publican <em>"Design Patterns: Elements of Reusable Object-Oriented Software"</em>, sentando las bases modernas de la ingeniería de software y catalogando los 23 patrones clásicos.
+              </p>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute -left-[31px] top-1.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-full p-1 border-4 border-white dark:border-slate-950">
+              <Heart className="h-4 w-4" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">Años 2000 - 2010</span>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">Adopción Masiva en Frameworks</h3>
+              <p className="text-sm text-slate-550 dark:text-slate-400 leading-relaxed">
+                Frameworks empresariales como Spring (Java), .NET Framework (C#) y posteriormente Express.js adoptan los patrones como estándar de desarrollo. Patrones como <em>Observer</em> y <em>Chain of Responsibility</em> se vuelven indispensables para manejar middleware y flujos reactivos.
+              </p>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute -left-[31px] top-1.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-full p-1 border-4 border-white dark:border-slate-950">
+              <ShieldAlert className="h-4 w-4" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">Presente</span>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">Era de la Reactividad y Microservicios</h3>
+              <p className="text-sm text-slate-550 dark:text-slate-400 leading-relaxed">
+                Con el auge de JavaScript/TypeScript, React y la programación reactiva (RxJS), los patrones de comportamiento evolucionan. Siguen siendo un pilar clave en arquitecturas de backend distribuidos y la gestión de estado frontend moderna.
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
