@@ -242,13 +242,31 @@ export default function PatternDetailClient({ pattern }: PatternDetailClientProp
             {pattern.realCase.descripcion}
           </p>
           <div className="space-y-2">
-            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Ejemplos Prácticos:</span>
-            <ul className="text-xs text-slate-700 dark:text-slate-350 space-y-2 pl-4 list-disc">
+            <span className="text-xs font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider block">Ejemplos Prácticos:</span>
+            <ul className="text-xs text-slate-700 dark:text-slate-350 space-y-2 pl-4 list-disc mb-4">
               {pattern.realCase.ejemplos.map((ej, idx) => (
                 <li key={idx} className="leading-relaxed font-medium">{ej}</li>
               ))}
             </ul>
           </div>
+          
+          {/* Código de resolución real del framework */}
+          {(pattern.realCase as any).codigoResolucion && (
+            <div className="space-y-2 pt-2">
+              <span className="text-xs font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider block">
+                Ejemplo de Implementación en Producción ({(pattern.realCase as any).lenguajeCodigo}):
+              </span>
+              <div className="overflow-hidden rounded-xl border border-slate-800 text-xs shadow-2xl">
+                <SyntaxHighlighter 
+                  language={((pattern.realCase as any).lenguajeCodigo || 'javascript').toLowerCase()} 
+                  style={vscDarkPlus}
+                  customStyle={{ margin: 0, padding: "1rem", background: "#090d16" }}
+                >
+                  {(pattern.realCase as any).codigoResolucion}
+                </SyntaxHighlighter>
+              </div>
+            </div>
+          )}
         </div>
       </motion.section>
     </div>

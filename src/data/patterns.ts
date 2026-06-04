@@ -33,6 +33,8 @@ export interface Pattern {
   realCase: {
     descripcion: string;
     ejemplos: string[];
+    codigoResolucion: string;
+    lenguajeCodigo: string;
   };
 }
 
@@ -219,12 +221,40 @@ public class Main {
     Rate->>API: Ejecuta Lógica
     API-->>Cliente: Respuesta HTTP 200 OK`,
     realCase: {
-      descripcion: "Se utiliza ampliamente en el manejo de flujos de red y seguridad.",
+      descripcion: "Este patrón es el núcleo detrás de los pipelines de procesamiento de peticiones en la web. Al usarlo, cada middleware actúa como un eslabón que decide si abortar la conexión o pasarla al siguiente middleware configurado.",
       ejemplos: [
-        "Middleware de Express.js: Cada middleware es un eslabón que procesa la solicitud HTTP o llama a next() para pasar al siguiente.",
-        "Filtros de Seguridad de Spring Security en Java: Autentican, autorizan y validan solicitudes de forma consecutiva.",
-        "Manejo de excepciones estructurado (Try-Catch jerárquico)."
-      ]
+        "Filtros de Seguridad de Spring Security (Java).",
+        "Manejo de Middlewares en routers de Express.js y NestJS.",
+        "Pipelines de validación de peticiones HTTP en ASP.NET Core."
+      ],
+      codigoResolucion: `// Implementación típica de un Pipeline de Middlewares en Express.js (Node.js)
+const express = require('express');
+const app = express();
+
+// Eslabón 1: Autenticación
+const authMiddleware = (req, res, next) => {
+  const token = req.headers['authorization'];
+  if (token === 'SECRET-123') {
+    next(); // Pasa al siguiente middleware en la cadena
+  } else {
+    res.status(401).send('Acceso no autorizado');
+  }
+};
+
+// Eslabón 2: Validación de datos
+const dataValidation = (req, res, next) => {
+  if (req.body && req.body.username) {
+    next(); // Solicitud correcta, rutea al controlador
+  } else {
+    res.status(400).send('Falta campo username');
+  }
+};
+
+// Configuración de la cadena de responsabilidades en la ruta
+app.post('/api/profile', authMiddleware, dataValidation, (req, res) => {
+  res.send('Perfil del usuario cargado.');
+});`,
+      lenguajeCodigo: "JavaScript"
     }
   },
   {
@@ -374,12 +404,47 @@ public class Main {
     Comando->>Receptor: insert("Ana")
     Invocador->>Invocador: Apilar Comando en Historial`,
     realCase: {
-      descripcion: "Se utiliza mucho en el diseño de interfaces de usuario y sistemas transaccionales.",
+      descripcion: "El patrón Command se utiliza en la arquitectura de interfaces de usuario modernas y sistemas de colas de tareas. Al desacoplar la llamada de la ejecución, es posible realizar operaciones de revertir, registrar historial e incluso procesar comandos de forma asíncrona.",
       ejemplos: [
-        "Implementación del botón Deshacer/Rehacer (Ctrl+Z / Ctrl+Y) en editores de texto (como VS Code, Microsoft Word).",
-        "Sistemas de colas de trabajos en segundo plano (Background Job Queues).",
-        "Mapeo de acciones de control en videojuegos (Configuración de botones asignados a comandos)."
-      ]
+        "Despacho de acciones en Redux Toolkit (React) para actualizar estados de forma predecible.",
+        "Colas de tareas distribuidas en segundo plano (como Celery o BullMQ).",
+        "Sistemas de Undo/Redo en editores gráficos o suites de productividad."
+      ],
+      codigoResolucion: `// Ejemplo de Redux Toolkit en Frontend React para manejar comandos de UI
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+
+interface EditorState {
+  text: string;
+  history: string[];
+}
+
+const initialState: EditorState = {
+  text: "",
+  history: []
+};
+
+// El Slice actúa como el invoker/receptor combinado
+const editorSlice = createSlice({
+  name: 'editor',
+  initialState,
+  reducers: {
+    // Comando Concreto de Escritura
+    writeText: (state, action: PayloadAction<string>) => {
+      state.history.push(state.text); // Guardar estado para deshacer
+      state.text += action.payload;
+    },
+    // Comando de Revertir (Undo)
+    undoAction: (state) => {
+      if (state.history.length > 0) {
+        state.text = state.history.pop() || "";
+      }
+    }
+  }
+});
+
+export const { writeText, undoAction } = editorSlice.actions;
+export default editorSlice.reducer;`,
+      lenguajeCodigo: "TypeScript"
     }
   },
   {
@@ -500,12 +565,36 @@ public class Main {
     Right-->>And: true
     And-->>Cliente: true`,
     realCase: {
-      descripcion: "Se utiliza para parsear y evaluar lenguajes o lenguajes de marcado específicos.",
+      descripcion: "El intérprete es común en motores de reglas empresariales y parseo de consultas dinámicas en tiempo de ejecución. Permite evaluar expresiones complejas e inyectar variables de contexto para procesamiento rápido.",
       ejemplos: [
-        "Motores de expresiones regulares (RegEx).",
-        "Analizadores de sentencias SQL simples.",
-        "Evaluadores de fórmulas lógicas o matemáticas en hojas de cálculo."
-      ]
+        "Spring Expression Language (SpEL) en Java para evaluar anotaciones dinámicamente.",
+        "Evaluadores de reglas de negocio complejas en gestores de flujo de trabajo (BPMN).",
+        "Parseo y compilación de expresiones RegEx en motores JavaScript/V8."
+      ],
+      codigoResolucion: `// Evaluación dinámica de reglas usando Spring Expression Language (SpEL) en Java
+import org.springframework.expression.Expression;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
+
+public class SpelEvaluationExample {
+    public static void main(String[] args) {
+        ExpressionParser parser = new SpelExpressionParser();
+        
+        // Expresión lógica de la regla
+        Expression exp = parser.parseExpression("age >= 18 and role == 'ADMIN'");
+        
+        // Definir contexto/datos del usuario
+        StandardEvaluationContext context = new StandardEvaluationContext();
+        context.setVariable("age", 20);
+        context.setVariable("role", "ADMIN");
+        
+        // Interpretar la expresión lógica en base al contexto
+        boolean result = Boolean.TRUE.equals(exp.getValue(context, Boolean.class));
+        System.out.println("¿Acceso permitido?: " + result);
+    }
+}`,
+      lenguajeCodigo: "Java"
     }
   },
   {
@@ -645,12 +734,38 @@ public class Main {
         Iterador-->>Cliente: Record
     end`,
     realCase: {
-      descripcion: "Es uno de los patrones más comunes de la programación moderna, implementado nativamente en casi todos los lenguajes.",
+      descripcion: "El recorrido de conjuntos de datos es la base de las APIs de colecciones y lectura de datos masiva desde bases de datos (SQL Cursors, ResultSet). Evita cargar gigabytes de datos en la memoria a la vez cargando elementos secuencialmente.",
       ejemplos: [
         "El bucle foreach de Java (detrás de bambalinas utiliza la interfaz java.util.Iterator).",
         "Colecciones de Java como ArrayList, HashSet, HashMap y sus métodos iterator().",
         "Los generadores de JavaScript/TypeScript (`yield` y el protocolo Iterable)."
-      ]
+      ],
+      codigoResolucion: `// Procesamiento diferido de colecciones en Java usando Iterator de base de datos
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
+
+public class DatabaseResultSetIterator {
+    public void processLargeQuery() {
+        try (Connection conn = DriverManager.getConnection("jdbc:h2:mem:test", "sa", "");
+             Statement stmt = conn.createStatement()) {
+             
+            // El ResultSet actúa como un Iterator clásico
+            ResultSet rs = stmt.executeQuery("SELECT id, name FROM users");
+            
+            // Recorrido secuencial amortizado en memoria
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String name = rs.getString("name");
+                System.out.println("Procesando registro: " + id + " -> " + name);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}`,
+      lenguajeCodigo: "Java"
     }
   },
   {
@@ -789,12 +904,34 @@ public class Main {
     Broker->>Inventory: receive("NUEVO_PEDIDO:1001-A")
     Note over Inventory: Ajustar stock`,
     realCase: {
-      descripcion: "Se aplica ampliamente en sistemas con interacciones complejas de UI y arquitecturas de red.",
+      descripcion: "Centraliza la lógica de mensajería asíncrona entre microservicios autónomos. En lugar de que el Microservicio A conozca las URLs REST del Microservicio B, C y D, todos envían eventos a un Broker centralizado de Kafka/RabbitMQ.",
       ejemplos: [
         "Sistemas de chat grupal y mensajería instantánea: El servidor de chat actúa como mediador para retransmitir los mensajes.",
         "Controladores de UI complejos (JavaFX, Swing, React): Un componente padre o un estado centralizado (Redux) maneja los eventos de todos los inputs.",
         "Sistemas de control de tráfico aéreo."
-      ]
+      ],
+      codigoResolucion: `// Configuración de un ruteador Kafka Producer como Mediador en Spring Boot
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+public class OrderEventMediator {
+    private final KafkaTemplate<String, String> kafkaTemplate;
+
+    public OrderEventMediator(KafkaTemplate<String, String> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    // Centraliza la mensajería, desacoplando los servicios emisores de los receptores
+    public void notifyOrderCreated(String orderId) {
+        String eventPayload = "{ \\"orderId\\": \\"" + orderId + "\\", \\"status\\": \\"CREATED\\" }";
+        
+        // Ruteador envía el mensaje a la cola centralizada
+        kafkaTemplate.send("orders-topic", orderId, eventPayload);
+        System.out.println("[Mediator] Evento de Orden publicado en Kafka Topic.");
+    }
+}`,
+      lenguajeCodigo: "Java"
     }
   },
   {
@@ -934,12 +1071,34 @@ public class Main {
     Workspace->>Commit: getContent()
     Commit-->>Workspace: "v1"`,
     realCase: {
-      descripcion: "Muy utilizado en utilidades de recuperación y sistemas de control de versiones.",
+      descripcion: "En sistemas interactivos de frontend, Memento permite registrar instantáneas previas de variables de estado complejas para habilitar atajos como deshacer o volver a la última versión antes de un fallo inesperado del sistema.",
       ejemplos: [
         "Sistemas de guardado de estado en videojuegos (Quicksaves).",
         "Implementación del historial de ediciones en editores gráficos o de texto.",
         "Sistemas de transacciones de bases de datos para realizar Rollback si ocurre algún fallo."
-      ]
+      ],
+      codigoResolucion: `// Custom React Hook en TypeScript para deshacer estados complejos (Memento)
+import { useState } from "react";
+
+export function useHistoryState<T>(initialValue: T) {
+  const [state, setState] = useState<T>(initialValue);
+  const [mementos, setMementos] = useState<T[]>([]); // Historial de recuerdos
+
+  const updateState = (newValue: T) => {
+    setMementos((prev) => [...prev, state]); // Guarda snapshot previo (Memento)
+    setState(newValue);
+  };
+
+  const undo = () => {
+    if (mementos.length === 0) return;
+    const previous = mementos[mementos.length - 1];
+    setMementos((prev) => prev.slice(0, -1));
+    setState(previous); // Restaura el estado previo
+  };
+
+  return [state, updateState, undo] as const;
+}`,
+      lenguajeCodigo: "TypeScript"
     }
   },
   {
@@ -1043,12 +1202,29 @@ public class Main {
     Bus->>Email: onEvent("ORDER_CREATED", "Orden #8992")
     Bus->>Logistics: onEvent("ORDER_CREATED", "Orden #8992")`,
     realCase: {
-      descripcion: "Es un pilar fundamental en arquitecturas reactivas y manejo de eventos.",
+      descripcion: "Utilizado para suscribir callbacks a eventos del ciclo de vida del DOM o flujos de streaming asíncronos de datos de red, evitando el consumo ineficiente de recursos de polling.",
       ejemplos: [
         "Manejo de eventos en JavaScript/DOM: addEventListener() añade observadores para escuchar clicks o teclas.",
         "Programación Reactiva con RxJS / ReactiveX (Observables y Observers).",
         "React: El sistema de renderizado de componentes que observan cambios de estado (useState, Redux, Context API)."
-      ]
+      ],
+      codigoResolucion: `// Registro de EventListener (Observer) nativo en un Servidor Node.js
+const EventEmitter = require('events');
+const orderEmitter = new EventEmitter();
+
+// Observador 1: Registrar Logs
+orderEmitter.on('order_placed', (orderId) => {
+  console.log(\`[Logger] Pedido \${orderId} registrado en auditoría.\`);
+});
+
+// Observador 2: Enviar Correo
+orderEmitter.on('order_placed', (orderId) => {
+  console.log(\`[Mailer] Correo de compra enviado para \${orderId}.\`);
+});
+
+// Sujeto emite el cambio
+orderEmitter.emit('order_placed', '99827-A');`,
+      lenguajeCodigo: "JavaScript"
     }
   },
   {
@@ -1190,12 +1366,39 @@ public class Main {
     Created->>Context: setState(PaidState)
     Note over Context: Estado actualiza a PaidState`,
     realCase: {
-      descripcion: "Se utiliza en sistemas de negocio con flujos de aprobación y lógicas de automatización de estados.",
+      descripcion: "Utilizado en la automatización de flujos de aprobación complejos de documentos y de compras donde la lógica de validación difiere radicalmente según la fase activa del objeto.",
       ejemplos: [
         "Máquinas expendedoras físicas e interfaces de cajero automático (ATM).",
         "Sistemas de gestión de pedidos (E-commerce): Carrito -> Procesando -> Enviado -> Entregado.",
         "Inteligencia Actorial de enemigos en videojuegos: Patrullar -> Perseguir -> Atacar -> Huir."
-      ]
+      ],
+      codigoResolucion: `// Implementación de Máquina de Estados usando Spring StateMachine en Java
+import org.springframework.statemachine.StateMachine;
+import org.springframework.statemachine.config.StateMachineBuilder;
+
+public class SpringStateMachineConfig {
+    public StateMachine<String, String> buildMachine() throws Exception {
+        StateMachineBuilder.Builder<String, String> builder = StateMachineBuilder.builder();
+
+        // 1. Configurar Estados
+        builder.configureStates()
+            .withStates()
+            .initial("CREATED")
+            .state("PAID")
+            .state("SHIPPED");
+
+        // 2. Configurar Transiciones y disparadores (Events)
+        builder.configureTransitions()
+            .withExternal()
+            .source("CREATED").target("PAID").event("PROCESS_PAYMENT")
+            .and()
+            .withExternal()
+            .source("PAID").target("SHIPPED").event("SHIP");
+
+        return builder.build();
+    }
+}`,
+      lenguajeCodigo: "Java"
     }
   },
   {
@@ -1304,18 +1507,44 @@ public class Main {
     participant Context as InvoiceCalculator
     participant Strategy as USTaxCalculation
 
-    Cliente->>Context: setTaxStrategy(USTaxCalculation)
+    Cliente->>Context: setPaymentStrategy(USTaxCalculation)
     Cliente->>Context: calculateTotalInvoice(100)
     Context->>Strategy: calculateTax(100)
     Strategy-->>Context: 8.00
     Context-->>Cliente: 108.00`,
     realCase: {
-      descripcion: "Es de los patrones más implementados para encapsular variaciones de algoritmos comerciales o matemáticos.",
+      descripcion: "Permite estructurar pasarelas de facturación globales donde el cálculo de retenciones o método de cobro varía según la geolocalización o el tipo de cliente sin alterar la clase del flujo de caja.",
       ejemplos: [
         "Pasarelas de pago múltiples en sistemas e-commerce (Stripe, PayPal, Apple Pay, MercadoPago).",
         "Algoritmos de ordenamiento intercambiables (Sort) según el tamaño del array.",
         "Compresión de archivos: Elegir dinámicamente entre algoritmos ZIP, GZIP o TAR."
-      ]
+      ],
+      codigoResolucion: `// Ruteador dinámico de pasarelas de pago usando Strategy en Java con inyección de Spring
+import org.springframework.stereotype.Service;
+import java.util.Map;
+
+public interface PaymentGateway {
+    void process(double amount);
+}
+
+@Service
+public class BillingProcessor {
+    // Spring inyecta automáticamente todas las estrategias en un mapa con sus IDs
+    private final Map<String, PaymentGateway> gateways;
+
+    public BillingProcessor(Map<String, PaymentGateway> gateways) {
+        this.gateways = gateways;
+    }
+
+    public void checkout(String gatewayType, double amount) {
+        PaymentGateway strategy = gateways.get(gatewayType);
+        if (strategy == null) {
+            throw new IllegalArgumentException("Método de pago no disponible.");
+        }
+        strategy.process(amount); // Ejecuta la estrategia elegida dinámicamente
+    }
+}`,
+      lenguajeCodigo: "Java"
     }
   },
   {
@@ -1423,12 +1652,33 @@ public class Main {
     Pipeline->>Pipeline: transform()
     Pipeline->>Pipeline: load() (base class implementation)`,
     realCase: {
-      descripcion: "Es la base del diseño de frameworks orientados a objetos, donde el framework define el ciclo de vida y tú inyectas el código.",
+      descripcion: "El patrón de método plantilla es la base estructural del ciclo de consultas en base de datos de librerías como JDBC (JdbcTemplate). El framework prepara la conexión y libera recursos, y tú inyectas sólo la query.",
       ejemplos: [
         "Frameworks de pruebas como JUnit (los métodos setUp(), tearDown() se ejecutan bajo un flujo de plantilla predefinido).",
         "Servlets de Java (HttpServlet): El método service() define la plantilla que llama a doGet() o doPost().",
         "React Component Lifecycle: Métodos como componentDidMount() son ganchos (hooks) que el framework ejecuta en un orden estricto."
-      ]
+      ],
+      codigoResolucion: `// Implementación típica del patrón en el framework Spring (JdbcTemplate Query)
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+
+public class UserRowMapperRepository {
+    private final JdbcTemplate jdbcTemplate;
+
+    public UserRowMapperRepository(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    public void printUserNames() {
+        // JdbcTemplate maneja abrir conexión, preparar statement, manejar errores y cerrar conexión (Template Method)
+        // El cliente solo define el mapeo del registro concreto (Concrete step callback)
+        jdbcTemplate.query("SELECT id, username FROM users", (rs, rowNum) -> {
+            System.out.println("Usuario mapeado: " + rs.getString("username"));
+            return null;
+        });
+    }
+}`,
+      lenguajeCodigo: "Java"
     }
   },
   {
@@ -1541,12 +1791,28 @@ public class Main {
     Visitor-->>Element: void
     Element-->>Cliente: void`,
     realCase: {
-      descripcion: "Altamente especializado en operaciones sobre estructuras arbóreas compuestas complejas.",
+      descripcion: "El compilador e intérprete de Javascript (Babel) recorre el árbol sintáctico abstracto (AST) de tu código usando un objeto Visitor para realizar transpilación de ES6 a ES5 o análisis de linters.",
       ejemplos: [
         "Compiladores y analizadores de código: Operaciones de optimización o generación de código sobre el árbol de sintaxis abstracta (AST).",
         "Motores de renderizado de UI para calcular dimensiones, dibujar elementos o exportar a otros formatos.",
         "Sistemas de análisis de estructuras de documentos (por ejemplo, exportar HTML/XML a PDF)."
-      ]
+      ],
+      codigoResolucion: `// Implementación de un plugin de Babel usando un Visitor en JavaScript
+module.exports = function (babel) {
+  const { types: t } = babel;
+  return {
+    name: "replace-identifiers-visitor",
+    visitor: {
+      // Babel ejecuta esta función al visitar cada nodo Identifier del árbol AST
+      Identifier(path) {
+        if (path.node.name === "nombresAntiguos") {
+          path.node.name = "nombresNuevos"; // Transpila el nodo AST
+        }
+      }
+    }
+  };
+};`,
+      lenguajeCodigo: "JavaScript"
     }
   }
 ];
