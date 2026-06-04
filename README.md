@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Catálogo Interactivo de Patrones de Diseño de Comportamiento (GoF)
 
-## Getting Started
+Una aplicación web moderna, profesional y responsive sobre los **11 Patrones de Diseño de Comportamiento** del catálogo clásico de la Gang of Four (GoF). Diseñada como recurso educativo interactivo, material de apoyo para exposiciones y proyecto de portafolio de arquitectura de software.
 
-First, run the development server:
+## 🚀 Características Principales
 
+- **Diseño Premium**: Interfaz inspirada en Vercel Docs y GitBook con tema oscuro por defecto para una lectura técnica agradable.
+- **Buscador de Patrones**: Barra de búsqueda interactiva en tiempo real en la barra lateral para ubicar conceptos, analogías o nombres.
+- **Estructura Académica Rigurosa**: Cada uno de los 11 patrones incluye:
+  1. Concepto formal, idea central, problema y analogía.
+  2. Diagrama de clases estructurado UML (Mermaid.js).
+  3. Tabla detallada de componentes y responsabilidades.
+  4. Tarjetas de ventajas y desventajas.
+  5. Código académico completo en Java con resaltado de sintaxis.
+  6. Diagrama secuencial de flujo (Mermaid.js).
+  7. Casos de uso reales en la industria (Spring, Express, etc.).
+- **Mini Simuladores Interactivos**:
+  - **Observer**: Suscripción de noticias y alertas en tiempo real.
+  - **Strategy**: Cálculo dinámico de comisiones en pasarelas de pago.
+  - **State**: Transiciones lógicas de estados en una máquina expendedora.
+  - **Chain of Responsibility**: Flujo secuencial y límites de firmas de aprobación financiera.
+- **Quiz de 15 Preguntas**: Cuestionario interactivo con retroalimentación detallada y explicación didáctica por respuesta.
+- **Tabla Comparativa**: Resumen interactivo para contrastar todos los patrones de comportamiento.
+
+## 🛠️ Stack Tecnológico
+
+- **Framework**: Next.js 16 (App Router)
+- **Lenguaje**: TypeScript
+- **Estilos**: Tailwind CSS
+- **Animaciones**: Framer Motion
+- **Diagramación**: Mermaid.js
+- **Resaltado de Código**: React Syntax Highlighter (Prism vscDarkPlus)
+- **Iconografía**: Lucide React
+
+---
+
+## 💻 Ejecución Local
+
+Para levantar el proyecto en tu entorno local, sigue estos pasos:
+
+### 1. Instalar dependencias
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Iniciar el servidor de desarrollo
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Abre tu navegador en [http://localhost:3000](http://localhost:3000) para interactuar con la plataforma.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 📦 Despliegue en GitHub Pages (Estático)
 
-To learn more about Next.js, take a look at the following resources:
+Este proyecto está completamente configurado para ser exportado estáticamente y subido a GitHub Pages de forma gratuita.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Configuración en `next.config.ts`
+El proyecto exporta archivos estáticos usando `output: "export"` y define el `basePath` correspondiente al nombre del repositorio (`/Patrones-de-Dise-o`) cuando se compila en producción.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Para compilar y exportar el proyecto:
+```bash
+npm run build
+```
+Esto creará una carpeta llamada `out/` en la raíz del proyecto que contiene todo el HTML, CSS y JS compilado, listo para ser subido a la rama de despliegue de tu repositorio (por ejemplo, `gh-pages`).
