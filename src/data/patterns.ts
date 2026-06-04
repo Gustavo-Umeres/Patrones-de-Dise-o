@@ -56,24 +56,24 @@ export const PATTERNS: Pattern[] = [
     class Handler {
         <<interface>>
         +setNext(handler: Handler) Handler
-        +handle(request: String) String
+        +handle(request: HttpRequest) boolean
     }
     class BaseHandler {
         <<abstract>>
         -next: Handler
         +setNext(handler: Handler) Handler
-        +handle(request: String) String
+        +handle(request: HttpRequest) boolean
     }
-    class ConcreteHandlerA {
-        +handle(request: String) String
+    class AuthenticationHandler {
+        +handle(request: HttpRequest) boolean
     }
-    class ConcreteHandlerB {
-        +handle(request: String) String
+    class RateLimitingHandler {
+        +handle(request: HttpRequest) boolean
     }
     Handler <|.. BaseHandler
     BaseHandler o-- Handler
-    BaseHandler <|-- ConcreteHandlerA
-    BaseHandler <|-- ConcreteHandlerB`,
+    BaseHandler <|-- AuthenticationHandler
+    BaseHandler <|-- RateLimitingHandler`,
     components: [
       { clase: "Handler (Manejador)", responsabilidad: "Declara la interfaz común para todos los manejadores concretos. Normalmente contiene un método para establecer el siguiente manejador." },
       { clase: "BaseHandler (Manejador Base)", responsabilidad: "Clase opcional abstracta que implementa la relación de encadenamiento y guarda la referencia al siguiente objeto." },
@@ -89,103 +89,135 @@ export const PATTERNS: Pattern[] = [
       { titulo: "Peticiones no garantizadas", descripcion: "No hay garantía de que la solicitud sea procesada por algún manejador si ninguno de la cadena la maneja." },
       { titulo: "Depuración compleja", descripcion: "Puede ser difícil seguir el flujo y depurar el código cuando la cadena es muy larga." }
     ],
-    javaCode: `// 1. Interfaz Handler
-public interface Handler {
-    void setNext(Handler next);
-    void handle(String request, double amount);
+    javaCode: `// Ejemplo Realista: Middleware Pipeline de una API HTTP
+public class HttpRequest {
+    private final String url;
+    private final String token;
+    private final String payload;
+    private final int requestCount;
+
+    public HttpRequest(String url, String token, String payload, int requestCount) {
+        this.url = url;
+        this.token = token;
+        this.payload = payload;
+        this.requestCount = requestCount;
+    }
+
+    public String getUrl() { return url; }
+    public String getToken() { return token; }
+    public String getPayload() { return payload; }
+    public int getRequestCount() { return requestCount; }
 }
 
-// 2. Manejador Base
-public abstract class BaseHandler implements Handler {
-    protected Handler next;
+public interface Middleware {
+    Middleware setNext(Middleware next);
+    boolean check(HttpRequest request);
+}
+
+public abstract class BaseMiddleware implements Middleware {
+    private Middleware next;
 
     @Override
-    public void setNext(Handler next) {
+    public Middleware setNext(Middleware next) {
         this.next = next;
+        return next;
     }
 
-    protected void passToNext(String request, double amount) {
-        if (next != null) {
-            next.handle(request, amount);
-        } else {
-            System.out.println("Fin de la cadena: La solicitud '" + request + "' por $" + amount + " no pudo ser procesada.");
+    protected boolean checkNext(HttpRequest request) {
+        if (next == null) {
+            return true; // Fin de la cadena, todo correcto
         }
+        return next.check(request);
     }
 }
 
-// 3. Manejadores Concretos
-public class Employee extends BaseHandler {
+// Filtro 1: Autenticación
+public class AuthenticationMiddleware extends BaseMiddleware {
     @Override
-    public void handle(String request, double amount) {
-        if (amount <= 1000) {
-            System.out.println("Empleado aprueba la solicitud '" + request + "' por $" + amount);
-        } else {
-            System.out.println("Empleado no puede aprobar. Pasando al Supervisor...");
-            passToNext(request, amount);
+    public boolean check(HttpRequest request) {
+        System.out.println("[Middleware Auth] Validando token de acceso...");
+        if (!"SUPER-SECRET-TOKEN-123".equals(request.getToken())) {
+            System.out.println("[Middleware Auth] Acceso denegado: Token inválido.");
+            return false;
         }
+        System.out.println("[Middleware Auth] Token verificado correctamente.");
+        return checkNext(request);
     }
 }
 
-public class Supervisor extends BaseHandler {
+// Filtro 2: Limitador de Tasa (Rate Limiter)
+public class RateLimitingMiddleware extends BaseMiddleware {
+    private final int maxRequestsPerMinute;
+
+    public RateLimitingMiddleware(int maxRequestsPerMinute) {
+        this.maxRequestsPerMinute = maxRequestsPerMinute;
+    }
+
     @Override
-    public void handle(String request, double amount) {
-        if (amount <= 5000) {
-            System.out.println("Supervisor aprueba la solicitud '" + request + "' por $" + amount);
-        } else {
-            System.out.println("Supervisor no puede aprobar. Pasando al Gerente...");
-            passToNext(request, amount);
+    public boolean check(HttpRequest request) {
+        System.out.println("[Middleware RateLimit] Validando tasa de solicitudes...");
+        if (request.getRequestCount() > maxRequestsPerMinute) {
+            System.out.println("[Middleware RateLimit] Solicitud rechazada: Límite excedido (" 
+                + request.getRequestCount() + "/" + maxRequestsPerMinute + ")");
+            return false;
         }
+        System.out.println("[Middleware RateLimit] Tasa permitida.");
+        return checkNext(request);
     }
 }
 
-public class Manager extends BaseHandler {
+// Filtro 3: Validación del Body
+public class BodyValidationMiddleware extends BaseMiddleware {
     @Override
-    public void handle(String request, double amount) {
-        if (amount <= 20000) {
-            System.out.println("Gerente aprueba la solicitud '" + request + "' por $" + amount);
-        } else {
-            System.out.println("Gerente no puede aprobar. Monto excede los límites permitidos.");
-            passToNext(request, amount);
+    public boolean check(HttpRequest request) {
+        System.out.println("[Middleware Validation] Validando formato de datos...");
+        if (request.getPayload() == null || request.getPayload().trim().isEmpty()) {
+            System.out.println("[Middleware Validation] Solicitud rechazada: Payload vacío.");
+            return false;
         }
+        System.out.println("[Middleware Validation] Cuerpo válido.");
+        return checkNext(request);
     }
 }
 
-// 4. Clase Cliente
 public class Main {
     public static void main(String[] args) {
-        Handler empleado = new Employee();
-        Handler supervisor = new Supervisor();
-        Handler gerente = new Manager();
+        // Inicializar filtros
+        Middleware serverPipeline = new AuthenticationMiddleware();
+        serverPipeline
+            .setNext(new RateLimitingMiddleware(60))
+            .setNext(new BodyValidationMiddleware());
 
-        // Configurar la cadena
-        empleado.setNext(supervisor);
-        supervisor.setNext(gerente);
+        // Enviar peticiones de ejemplo
+        HttpRequest peticionValida = new HttpRequest("/api/data", "SUPER-SECRET-TOKEN-123", "{ \"status\": \"ok\" }", 45);
+        HttpRequest peticionMalaToken = new HttpRequest("/api/data", "TOKEN-INVALIDO", "{ \"status\": \"ok\" }", 10);
+        HttpRequest peticionSpam = new HttpRequest("/api/data", "SUPER-SECRET-TOKEN-123", "{ \"status\": \"ok\" }", 120);
 
-        // Enviar peticiones
-        System.out.println("--- Petición 1 ---");
-        empleado.handle("Compra de papelería", 500);
+        System.out.println("--- Petición Válida ---");
+        boolean ok1 = serverPipeline.check(peticionValida);
+        System.out.println("Resultado: " + (ok1 ? "Procesada con éxito." : "Error en servidor."));
 
-        System.out.println("\\n--- Petición 2 ---");
-        empleado.handle("Laptop de desarrollo", 3500);
+        System.out.println("\\n--- Petición con Token Malo ---");
+        boolean ok2 = serverPipeline.check(peticionMalaToken);
+        System.out.println("Resultado: " + (ok2 ? "Procesada con éxito." : "Rechazada."));
 
-        System.out.println("\\n--- Petición 3 ---");
-        empleado.handle("Servidor dedicado", 15000);
-
-        System.out.println("\\n--- Petición 4 ---");
-        empleado.handle("Campaña de Marketing Gigante", 50000);
+        System.out.println("\\n--- Petición de Spam (Rate Limit) ---");
+        boolean ok3 = serverPipeline.check(peticionSpam);
+        System.out.println("Resultado: " + (ok3 ? "Procesada con éxito." : "Rechazada."));
     }
 }`,
     flow: `sequenceDiagram
     participant Cliente
-    participant Empleado
-    participant Supervisor
-    participant Gerente
+    participant Auth as AuthMiddleware
+    participant Rate as RateLimitMiddleware
+    participant API as ApiEndpoint
 
-    Cliente->>Empleado: handle("Compra de Laptop", 3500)
-    Note over Empleado: Monto > 1000
-    Empleado->>Supervisor: handle("Compra de Laptop", 3500)
-    Note over Supervisor: Monto <= 5000 (Aprueba)
-    Supervisor-->>Cliente: Petición Aprobada por Supervisor`,
+    Cliente->>Auth: check(request)
+    Note over Auth: Valida Token
+    Auth->>Rate: check(request)
+    Note over Rate: Valida Límite
+    Rate->>API: Ejecuta Lógica
+    API-->>Cliente: Respuesta HTTP 200 OK`,
     realCase: {
       descripcion: "Se utiliza ampliamente en el manejo de flujos de red y seguridad.",
       ejemplos: [
@@ -200,7 +232,7 @@ public class Main {
     name: "Command",
     englishName: "Comando",
     concept: {
-      definicion: "Convierte una solicitud en un objeto independiente que contiene toda la información sobre la solicitud. Esta transformación permite parametrizar métodos con diferentes solicitudes, retrasar o cola la ejecución de una solicitud y soportar operaciones que no se pueden realizar directamente.",
+      definicion: "Convierte una solicitud en un objeto independiente que contiene toda la información sobre la solicitud. Esta transformación permite parametrizar métodos con diferentes solicitudes, retrasar o encolar la ejecución de una solicitud y soportar operaciones que no se pueden realizar directamente.",
       ideaCentral: "Encapsular una acción o petición como un objeto, lo que permite registrar el historial de acciones, encolarlas y soportar operaciones de deshacer/rehacer (Undo/Redo).",
       problema: "Si la interfaz de usuario invoca directamente la lógica del negocio de los componentes, cambiar el comportamiento de un botón o reutilizar su acción en otro componente (ej. un menú rápido) obliga a duplicar código. Además, es imposible guardar un registro de qué se hizo para dar la opción de deshacer.",
       cuandoUsar: [
@@ -216,23 +248,24 @@ public class Main {
         +execute() void
         +undo() void
     }
-    class Light {
-        +on() void
-        +off() void
+    class Database {
+        +insert(query: String) void
+        +delete(query: String) void
     }
-    class LightOnCommand {
-        -light: Light
+    class InsertQueryCommand {
+        -db: Database
+        -query: String
         +execute() void
         +undo() void
     }
-    class Invoker {
-        -command: Command
-        +setCommand(command: Command)
-        +pressButton() void
+    class TransactionManager {
+        -history: List~Command~
+        +executeTransaction(cmd: Command)
+        +rollback() void
     }
-    Command <|.. LightOnCommand
-    LightOnCommand --> Light
-    Invoker --> Command`,
+    Command <|.. InsertQueryCommand
+    InsertQueryCommand --> Database
+    TransactionManager --> Command`,
     components: [
       { clase: "Command (Interfaz Comando)", responsabilidad: "Declara el método execute() y, opcionalmente, undo()." },
       { clase: "Concrete Command (Comando Concreto)", responsabilidad: "Implementa el método de ejecución, vinculando una acción con un objeto receptor específico." },
@@ -247,105 +280,99 @@ public class Main {
     disadvantages: [
       { titulo: "Multiplicación de clases", descripcion: "El código puede complicarse debido a la creación de una gran cantidad de clases nuevas para cada comando." }
     ],
-    javaCode: `// 1. Interfaz Command
-public interface Command {
+    javaCode: `// Ejemplo Realista: Gestor Transaccional de Base de Datos En-Memoria
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
+
+public class DatabaseReceiver {
+    private final List<String> records = new ArrayList<>();
+
+    public void insert(String record) {
+        records.add(record);
+        System.out.println("[Database] Fila insertada: '" + record + "'");
+    }
+
+    public void remove(String record) {
+        records.remove(record);
+        System.out.println("[Database] Fila eliminada: '" + record + "'");
+    }
+
+    public List<String> getRecords() {
+        return records;
+    }
+}
+
+public interface TransactionCommand {
     void execute();
-    void undo();
+    void rollback();
 }
 
-// 2. Receptor (Receiver)
-public class TextEditor {
-    private String text = "";
+public class InsertRecordCommand implements TransactionCommand {
+    private final DatabaseReceiver db;
+    private final String record;
 
-    public void write(String newText) {
-        text += newText;
-    }
-
-    public void eraseLast(int length) {
-        if (text.length() >= length) {
-            text = text.substring(0, text.length() - length);
-        }
-    }
-
-    public String getText() {
-        return text;
-    }
-}
-
-// 3. Comando Concreto
-public class WriteCommand implements Command {
-    private TextEditor editor;
-    private String textToWrite;
-
-    public WriteCommand(TextEditor editor, String textToWrite) {
-        this.editor = editor;
-        this.textToWrite = textToWrite;
+    public InsertRecordCommand(DatabaseReceiver db, String record) {
+        this.db = db;
+        this.record = record;
     }
 
     @Override
     public void execute() {
-        editor.write(textToWrite);
+        db.insert(record);
     }
 
     @Override
-    public void undo() {
-        editor.eraseLast(textToWrite.length());
+    public void rollback() {
+        db.remove(record);
     }
 }
 
-// 4. Invocador (Invoker)
-import java.util.Stack;
+public class TransactionEngineInvoker {
+    private final Stack<TransactionCommand> commandHistory = new Stack<>();
 
-public class CommandHistory {
-    private Stack<Command> history = new Stack<>();
-
-    public void executeCommand(Command cmd) {
+    public void runCommand(TransactionCommand cmd) {
         cmd.execute();
-        history.push(cmd);
+        commandHistory.push(cmd);
     }
 
-    public void undo() {
-        if (!history.isEmpty()) {
-            Command cmd = history.pop();
-            cmd.undo();
+    public void rollbackLastTransaction() {
+        if (!commandHistory.isEmpty()) {
+            TransactionCommand cmd = commandHistory.pop();
+            System.out.println("[TransactionEngine] Deshaciendo última acción transaccional...");
+            cmd.rollback();
         } else {
-            System.out.println("No hay acciones para deshacer.");
+            System.out.println("[TransactionEngine] No hay transacciones para revertir.");
         }
     }
 }
 
-// 5. Cliente
 public class Main {
     public static void main(String[] args) {
-        TextEditor editor = new TextEditor();
-        CommandHistory history = new CommandHistory();
+        DatabaseReceiver db = new DatabaseReceiver();
+        TransactionEngineInvoker engine = new TransactionEngineInvoker();
 
-        System.out.println("Texto inicial: '" + editor.getText() + "'");
+        System.out.println("Base de datos inicial: " + db.getRecords());
 
-        history.executeCommand(new WriteCommand(editor, "Hola "));
-        System.out.println("Escribir 1: '" + editor.getText() + "'");
+        engine.runCommand(new InsertRecordCommand(db, "Usuario: Carlos"));
+        engine.runCommand(new InsertRecordCommand(db, "Usuario: Ana"));
+        System.out.println("Base de datos actual: " + db.getRecords());
 
-        history.executeCommand(new WriteCommand(editor, "Mundo de Patrones!"));
-        System.out.println("Escribir 2: '" + editor.getText() + "'");
-
-        history.undo();
-        System.out.println("Deshacer: '" + editor.getText() + "'");
-
-        history.undo();
-        System.out.println("Deshacer de nuevo: '" + editor.getText() + "'");
+        engine.rollbackLastTransaction();
+        System.out.println("Base de datos después de rollback: " + db.getRecords());
     }
 }`,
     flow: `sequenceDiagram
     participant Cliente
-    participant Invocador
-    participant ComandoConcreto
-    participant Receptor
+    participant Invocador as Engine
+    participant Comando as InsertCommand
+    participant Receptor as DB
 
-    Cliente->>ComandoConcreto: new WriteCommand(editor, "Hola")
-    Cliente->>Invocador: executeCommand(comando)
-    Invocador->>ComandoConcreto: execute()
-    ComandoConcreto->>Receptor: write("Hola")
-    Invocador->>Invocador: Guardar comando en historial`,
+    Cliente->>Comando: new InsertCommand(db, "Ana")
+    Cliente->>Invocador: runCommand(comando)
+    Invocador->>Comando: execute()
+    Comando->>Receptor: insert("Ana")
+    Invocador->>Invocador: Apilar Comando en Historial`,
     realCase: {
       descripcion: "Se utiliza mucho en el diseño de interfaces de usuario y sistemas transaccionales.",
       ejemplos: [
@@ -370,22 +397,22 @@ public class Main {
       analogia: "Traducción de partituras musicales: Cada nota y símbolo en una partitura representa una instrucción gramatical que un músico (intérprete) sabe leer y ejecutar en su instrumento."
     },
     uml: `classDiagram
-    class AbstractExpression {
+    class Expression {
         <<interface>>
-        +interpret(context: Context) int
+        +interpret(context: Map) boolean
     }
-    class TerminalExpression {
-        -value: int
-        +interpret(context: Context) int
+    class EqualsExpression {
+        -variable: String
+        -value: String
+        +interpret(context: Map) boolean
     }
-    class NonTerminalExpression {
-        -left: AbstractExpression
-        -right: AbstractExpression
-        +interpret(context: Context) int
+    class AndExpression {
+        -left: Expression
+        -right: Expression
+        +interpret(context: Map) boolean
     }
-    AbstractExpression <|.. TerminalExpression
-    AbstractExpression <|.. NonTerminalExpression
-    NonTerminalExpression --> AbstractExpression`,
+    Expression <|.. EqualsExpression
+    Expression <|.. AndExpression`,
     components: [
       { clase: "AbstractExpression (Expresión Abstracta)", responsabilidad: "Declara un método abstracto interpret(context) común a todos los nodos del árbol." },
       { clase: "TerminalExpression (Expresión Terminal)", responsabilidad: "Implementa el intérprete asociado con los símbolos terminales de la gramática (como constantes o variables)." },
@@ -399,89 +426,79 @@ public class Main {
     disadvantages: [
       { titulo: "Rendimiento y Complejidad", descripcion: "Para gramáticas complejas, la jerarquía de clases se vuelve enorme y muy difícil de mantener y evaluar eficientemente." }
     ],
-    javaCode: `// 1. Interfaz Expression
-public interface Expression {
-    int interpret();
+    javaCode: `// Ejemplo Realista: Evaluador de Filtros SQL WHERE en colecciones
+import java.util.HashMap;
+import java.util.Map;
+
+public interface SQLFilterExpression {
+    boolean interpret(Map<String, Object> context);
 }
 
-// 2. Expresión Terminal (Número)
-public class NumberExpression implements Expression {
-    private int number;
+// Expresión Terminal: Comprobación de Igualdad
+public class EqualsExpression implements SQLFilterExpression {
+    private final String column;
+    private final Object expectedValue;
 
-    public NumberExpression(int number) {
-        this.number = number;
+    public EqualsExpression(String column, Object expectedValue) {
+        this.column = column;
+        this.expectedValue = expectedValue;
     }
 
     @Override
-    public int interpret() {
-        return this.number;
+    public boolean interpret(Map<String, Object> context) {
+        if (!context.containsKey(column)) return false;
+        return expectedValue.equals(context.get(column));
     }
 }
 
-// 3. Expresiones No Terminales (Operaciones)
-public class AddExpression implements Expression {
-    private Expression leftExpression;
-    private Expression rightExpression;
+// Expresión No Terminal: Operación lógica AND
+public class AndExpression implements SQLFilterExpression {
+    private final SQLFilterExpression left;
+    private final SQLFilterExpression right;
 
-    public AddExpression(Expression left, Expression right) {
-        this.leftExpression = left;
-        this.rightExpression = right;
+    public AndExpression(SQLFilterExpression left, SQLFilterExpression right) {
+        this.left = left;
+        this.right = right;
     }
 
     @Override
-    public int interpret() {
-        return leftExpression.interpret() + rightExpression.interpret();
+    public boolean interpret(Map<String, Object> context) {
+        return left.interpret(context) && right.interpret(context);
     }
 }
 
-public class SubtractExpression implements Expression {
-    private Expression leftExpression;
-    private Expression rightExpression;
-
-    public SubtractExpression(Expression left, Expression right) {
-        this.leftExpression = left;
-        this.rightExpression = right;
-    }
-
-    @Override
-    public int interpret() {
-        return leftExpression.interpret() - rightExpression.interpret();
-    }
-}
-
-// 4. Cliente
 public class Main {
     public static void main(String[] args) {
-        // Expresión para evaluar: (5 + 10) - 3
-        Expression cinco = new NumberExpression(5);
-        Expression diez = new NumberExpression(10);
-        Expression tres = new NumberExpression(3);
+        // Regla: status = 'ACTIVE' AND role = 'ADMIN'
+        SQLFilterExpression activeFilter = new EqualsExpression("status", "ACTIVE");
+        SQLFilterExpression adminFilter = new EqualsExpression("role", "ADMIN");
+        SQLFilterExpression complexQuery = new AndExpression(activeFilter, adminFilter);
 
-        Expression suma = new AddExpression(cinco, diez); // 15
-        Expression resta = new SubtractExpression(suma, tres); // 15 - 3 = 12
+        // Registro de usuario en evaluación
+        Map<String, Object> user1 = new HashMap<>();
+        user1.put("status", "ACTIVE");
+        user1.put("role", "ADMIN");
 
-        int resultado = resta.interpret();
-        System.out.println("El resultado de evaluar '(5 + 10) - 3' es: " + resultado);
+        Map<String, Object> user2 = new HashMap<>();
+        user2.put("status", "INACTIVE");
+        user2.put("role", "ADMIN");
+
+        System.out.println("¿Usuario 1 cumple los requisitos? " + complexQuery.interpret(user1));
+        System.out.println("¿Usuario 2 cumple los requisitos? " + complexQuery.interpret(user2));
     }
 }`,
     flow: `sequenceDiagram
     participant Cliente
-    participant Resta as SubtractExpression
-    participant Suma as AddExpression
-    participant Cinco as NumberExpression (5)
-    participant Diez as NumberExpression (10)
-    participant Tres as NumberExpression (3)
+    participant And as AndExpression
+    participant Left as EqualsExpression (status)
+    participant Right as EqualsExpression (role)
 
-    Cliente->>Resta: interpret()
-    Resta->>Suma: interpret()
-    Suma->>Cinco: interpret()
-    Cinco-->>Suma: 5
-    Suma->>Diez: interpret()
-    Diez-->>Suma: 10
-    Suma-->>Resta: 15
-    Resta->>Tres: interpret()
-    Tres-->>Resta: 3
-    Resta-->>Cliente: 12`,
+    Cliente->>And: interpret(user1)
+    And->>Left: interpret(user1)
+    Left-->>And: true
+    And->>Right: interpret(user1)
+    Right-->>And: true
+    And-->>Cliente: true`,
     realCase: {
       descripcion: "Se utiliza para parsear y evaluar lenguajes o lenguajes de marcado específicos.",
       ejemplos: [
@@ -512,22 +529,21 @@ public class Main {
         +hasNext() boolean
         +next() Object
     }
-    class ConcreteIterator {
-        -collection: ConcreteCollection
-        -currentIndex: int
+    class DatabaseCursor {
+        -data: List
+        -index: int
         +hasNext() boolean
-        +next() Object
+        +next() Record
     }
-    class Collection {
+    class Dataset {
         <<interface>>
-        +createIterator() Iterator
+        +createCursor() Iterator
     }
-    class ConcreteCollection {
-        +createIterator() Iterator
+    class SQLDataset {
+        +createCursor() Iterator
     }
-    Iterator <|.. ConcreteIterator
-    Collection <|.. ConcreteCollection
-    ConcreteIterator --> ConcreteCollection`,
+    Iterator <|.. DatabaseCursor
+    Dataset <|.. SQLDataset`,
     components: [
       { clase: "Iterator (Interfaz Iterador)", responsabilidad: "Declara las operaciones necesarias para recorrer una colección: obtener el siguiente elemento, verificar si hay más, etc." },
       { clase: "ConcreteIterator (Iterador Concreto)", responsabilidad: "Implementa el algoritmo específico para recorrer una colección en particular." },
@@ -543,88 +559,90 @@ public class Main {
       { titulo: "Sobrecarga de clases", descripcion: "Aplicar el patrón puede ser excesivo si tu aplicación solo trabaja con listas simples." },
       { titulo: "Menor eficiencia", descripcion: "El uso de un iterador puede ser ligeramente menos eficiente que recorrer una estructura de datos simple directamente en ciertos lenguajes." }
     ],
-    javaCode: `// 1. Interfaz Iterator
-public interface Iterator<T> {
-    boolean hasNext();
-    T next();
-}
-
-// 2. Interfaz Colección
-public interface MyCollection<T> {
-    Iterator<T> createIterator();
-}
-
-// 3. Colección Concreta
+    javaCode: `// Ejemplo Realista: Recorrido y Cursor de Registros en una Simulación de BD
 import java.util.ArrayList;
 import java.util.List;
 
-public class NameCollection implements MyCollection<String> {
-    private List<String> names = new ArrayList<>();
+public class Record {
+    private final int id;
+    private final String data;
 
-    public void addName(String name) {
-        names.add(name);
+    public Record(int id, String data) {
+        this.id = id;
+        this.data = data;
+    }
+    public int getId() { return id; }
+    public String getData() { return data; }
+}
+
+public interface CursorIterator {
+    boolean hasNext();
+    Record next();
+}
+
+public interface QueryDataset {
+    CursorIterator createCursor();
+}
+
+public class DatabaseDataset implements QueryDataset {
+    private final List<Record> records = new ArrayList<>();
+
+    public void addRecord(Record r) {
+        records.add(r);
     }
 
     @Override
-    public Iterator<String> createIterator() {
-        return new NameIterator(names);
+    public CursorIterator createCursor() {
+        return new DatabaseCursor(records);
     }
 }
 
-// 4. Iterador Concreto
-import java.util.List;
-
-public class NameIterator implements Iterator<String> {
-    private List<String> names;
+public class DatabaseCursor implements CursorIterator {
+    private final List<Record> records;
     private int position = 0;
 
-    public NameIterator(List<String> names) {
-        this.names = names;
+    public DatabaseCursor(List<Record> records) {
+        this.records = records;
     }
 
     @Override
     public boolean hasNext() {
-        return position < names.size();
+        return position < records.size();
     }
 
     @Override
-    public String next() {
-        if (this.hasNext()) {
-            return names.get(position++);
-        }
-        return null;
+    public Record next() {
+        if (!hasNext()) return null;
+        return records.get(position++);
     }
 }
 
-// 5. Cliente
 public class Main {
     public static void main(String[] args) {
-        NameCollection coleccion = new NameCollection();
-        coleccion.addName("Carlos");
-        coleccion.addName("Ana");
-        coleccion.addName("Sofía");
-        coleccion.addName("Luis");
+        DatabaseDataset ds = new DatabaseDataset();
+        ds.addRecord(new Record(1, "Usuario: Carlos"));
+        ds.addRecord(new Record(2, "Usuario: Sofía"));
 
-        Iterator<String> iterador = coleccion.createIterator();
-        System.out.println("Recorriendo la colección de nombres:");
-        while (iterador.hasNext()) {
-            String nombre = iterador.next();
-            System.out.println("- Nombre: " + nombre);
+        CursorIterator cursor = ds.createCursor();
+        System.out.println("[App] Leyendo base de datos mediante cursor...");
+        while (cursor.hasNext()) {
+            Record r = cursor.next();
+            System.out.println("Registro ID: " + r.getId() + " - Datos: " + r.getData());
         }
     }
 }`,
     flow: `sequenceDiagram
     participant Cliente
-    participant Coleccion as NameCollection
-    participant Iterador as NameIterator
+    participant Coleccion as Dataset
+    participant Iterador as Cursor
 
-    Cliente->>Coleccion: createIterator()
-    Coleccion-->>Cliente: iterador (NameIterator)
+    Cliente->>Coleccion: createCursor()
+    Coleccion-->>Cliente: Cursor
     loop Mientras hasNext() es true
         Cliente->>Iterador: hasNext()
         Iterador-->>Cliente: true
         Cliente->>Iterador: next()
-        Iterador-->>Cliente: "NombreElemento"
+        Iterador-->>Cliente: Record
     end`,
     realCase: {
       descripcion: "Es uno de los patrones más comunes de la programación moderna, implementado nativamente en casi todos los lenguajes.",
@@ -651,24 +669,27 @@ public class Main {
       analogia: "Una torre de control de aeropuerto: Los pilotos de los aviones no hablan directamente entre ellos para coordinar aterrizajes y despegues (lo que causaría accidentes catastróficos). En su lugar, todos hablan con el controlador aéreo (Mediador), quien centraliza, organiza y autoriza las operaciones."
     },
     uml: `classDiagram
-    class Mediator {
+    class MessageBroker {
         <<interface>>
-        +notify(sender: Component, event: String) void
+        +publish(topic: String, message: String)
+        +register(node: Node)
     }
-    class ConcreteMediator {
-        -componentA: ComponentA
-        -componentB: ComponentB
-        +notify(sender: Component, event: String) void
+    class ClusterMessageBroker {
+        -nodes: List~Node~
+        +publish(topic: String, message: String)
+        +register(node: Node)
     }
-    class Component {
-        -mediator: Mediator
-        +setMediator(mediator: Mediator)
+    class Node {
+        <<abstract>>
+        -broker: MessageBroker
+        +send(topic: String, msg: String)
+        +receive(msg: String)
     }
-    Mediator <|.. ConcreteMediator
-    ConcreteMediator --> Component
-    Component --> Mediator`,
+    MessageBroker <|.. ClusterMessageBroker
+    Node --> MessageBroker
+    ClusterMessageBroker o-- Node`,
     components: [
-      { clase: "Mediator (Interfaz Mediador)", responsabilidad: "Declara los métodos de comunicación con los componentes, usualmente un único método notify()." },
+      { clase: "Mediator (Interfaz Mediador)", responsabilidad: "Declara los métodos de comunicación con los componentes, usualmente un único método notify() o publish()." },
       { clase: "ConcreteMediator (Mediador Concreto)", responsabilidad: "Gestiona las relaciones y coordina el comportamiento de todos los componentes concretos." },
       { clase: "Colleagues (Colegas / Componentes)", responsabilidad: "Clases diversas que ejecutan lógica de negocio. Se comunican únicamente con el Mediador, nunca entre sí." }
     ],
@@ -680,92 +701,93 @@ public class Main {
     disadvantages: [
       { titulo: "Objeto Todopoderoso (God Object)", descripcion: "Con el tiempo, un mediador puede crecer sin control y convertirse en un monolito complejo difícil de mantener." }
     ],
-    javaCode: `// 1. Interfaz Mediador
-public interface ChatMediator {
-    void sendMessage(String msg, User user);
-    void addUser(User user);
+    javaCode: `// Ejemplo Realista: Broker de Mensajes Distribuido (Kafka/RabbitMQ Simplificado)
+import java.util.ArrayList;
+import java.util.List;
+
+public interface MessageBroker {
+    void register(ServiceNode node);
+    void send(String topic, String msg, ServiceNode sender);
 }
 
-// 2. Clase Colega Abstracta
-public abstract class User {
-    protected ChatMediator mediator;
-    protected String name;
+public abstract class ServiceNode {
+    protected final MessageBroker broker;
+    protected final String serviceName;
 
-    public User(ChatMediator med, String name) {
-        this.mediator = med;
-        this.name = name;
+    public ServiceNode(MessageBroker broker, String serviceName) {
+        this.broker = broker;
+        this.serviceName = serviceName;
     }
 
-    public abstract void send(String msg);
     public abstract void receive(String msg);
 }
 
-// 3. Colega Concreto
-public class ChatUser extends User {
-    public ChatUser(ChatMediator med, String name) {
-        super(med, name);
+public class OrderServiceNode extends ServiceNode {
+    public OrderServiceNode(MessageBroker broker) {
+        super(broker, "OrderService");
     }
 
-    @Override
-    public void send(String msg) {
-        System.out.println(this.name + " envía: " + msg);
-        mediator.sendMessage(msg, this);
+    public void createOrder(String orderId) {
+        System.out.println("[OrderService] Pedido creado: " + orderId);
+        broker.send("ORDERS", "NUEVO_PEDIDO:" + orderId, this);
     }
 
     @Override
     public void receive(String msg) {
-        System.out.println(this.name + " recibió: " + msg);
+        System.out.println("[OrderService] Evento recibido: " + msg);
     }
 }
 
-// 4. Mediador Concreto
-import java.util.ArrayList;
-import java.util.List;
-
-public class ChatMediatorImpl implements ChatMediator {
-    private List<User> users = new ArrayList<>();
-
-    @Override
-    public void addUser(User user) {
-        this.users.add(user);
+public class InventoryServiceNode extends ServiceNode {
+    public InventoryServiceNode(MessageBroker broker) {
+        super(broker, "InventoryService");
     }
 
     @Override
-    public void sendMessage(String msg, User sender) {
-        for (User u : this.users) {
-            // El emisor no recibe su propio mensaje
-            if (u != sender) {
-                u.receive(msg);
+    public void receive(String msg) {
+        System.out.println("[InventoryService] Ajustando stock debido a: " + msg);
+    }
+}
+
+public class ClusterMessageBroker implements MessageBroker {
+    private final List<ServiceNode> nodes = new ArrayList<>();
+
+    @Override
+    public void register(ServiceNode node) {
+        nodes.add(node);
+    }
+
+    @Override
+    public void send(String topic, String msg, ServiceNode sender) {
+        System.out.println("[Broker] Ruteando evento del canal: " + topic);
+        for (ServiceNode node : nodes) {
+            if (node != sender) {
+                node.receive(msg);
             }
         }
     }
 }
 
-// 5. Cliente
 public class Main {
     public static void main(String[] args) {
-        ChatMediator mediator = new ChatMediatorImpl();
+        MessageBroker broker = new ClusterMessageBroker();
+        OrderServiceNode orders = new OrderServiceNode(broker);
+        InventoryServiceNode inventory = new InventoryServiceNode(broker);
 
-        User user1 = new ChatUser(mediator, "Juan");
-        User user2 = new ChatUser(mediator, "María");
-        User user3 = new ChatUser(mediator, "Pedro");
+        broker.register(orders);
+        broker.register(inventory);
 
-        mediator.addUser(user1);
-        mediator.addUser(user2);
-        mediator.addUser(user3);
-
-        user1.send("Hola a todos en el chat!");
+        orders.createOrder("1001-A");
     }
 }`,
     flow: `sequenceDiagram
-    participant Juan as User 1 (Juan)
-    participant Mediador as ChatMediator
-    participant Maria as User 2 (María)
-    participant Pedro as User 3 (Pedro)
+    participant Orders as OrderServiceNode
+    participant Broker as ClusterBroker
+    participant Inventory as InventoryServiceNode
 
-    Juan->>Mediador: send("Hola")
-    Mediador->>Maria: receive("Hola")
-    Mediador->>Pedro: receive("Hola")`,
+    Orders->>Broker: send("ORDERS", "NUEVO_PEDIDO:1001-A", this)
+    Broker->>Inventory: receive("NUEVO_PEDIDO:1001-A")
+    Note over Inventory: Ajustar stock`,
     realCase: {
       descripcion: "Se aplica ampliamente en sistemas con interacciones complejas de UI y arquitecturas de red.",
       ejemplos: [
@@ -790,22 +812,22 @@ public class Main {
       analogia: "Guardar partida en un videojuego: En cualquier momento puedes guardar la partida (Memento). Si tu personaje es derrotado por un jefe final, puedes cargar el punto de control restaurando la vida, posición e inventario exactos que tenías."
     },
     uml: `classDiagram
-    class Memento {
-        -state: String
-        +getState() String
+    class FileSnapshot {
+        -content: String
+        +getContent() String
     }
-    class Originator {
-        -state: String
-        +save() Memento
-        +restore(m: Memento)
+    class GitWorkspace {
+        -content: String
+        +save() FileSnapshot
+        +restore(fs: FileSnapshot)
     }
-    class Caretaker {
-        -history: List~Memento~
-        +backup() void
-        +undo() void
+    class GitHistory {
+        -history: Stack
+        +commit(gw: GitWorkspace)
+        +checkout()
     }
-    Originator ..> Memento
-    Caretaker o-- Memento`,
+    GitWorkspace ..> FileSnapshot
+    GitHistory o-- FileSnapshot`,
     components: [
       { clase: "Originator (Creador / Originador)", responsabilidad: "El objeto que posee el estado original. Puede crear mementos con su estado actual y usarlos para restaurarse." },
       { clase: "Memento (Recuerdo)", responsabilidad: "Objeto inmutable que almacena el estado del Originator. Ninguna clase externa tiene acceso a sus datos internos excepto el propio Originator." },
@@ -819,113 +841,98 @@ public class Main {
       { titulo: "Alto consumo de memoria", descripcion: "Si los mementos guardan mucha información o se crean muy seguido, la memoria RAM puede saturarse rápidamente." },
       { titulo: "Ciclo de vida del historial", descripcion: "El cuidador debe gestionar la eliminación de mementos obsoletos para evitar fugas de memoria." }
     ],
-    javaCode: `// 1. Memento (Inmutable)
-public final class EditorMemento {
-    private final String content;
-
-    public EditorMemento(String content) {
-        this.content = content;
-    }
-
-    public String getContent() {
-        return content;
-    }
-}
-
-// 2. Originador (Originator)
-public class Editor {
-    private String content;
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public EditorMemento save() {
-        return new EditorMemento(content);
-    }
-
-    public void restore(EditorMemento memento) {
-        if (memento != null) {
-            this.content = memento.getContent();
-        }
-    }
-}
-
-// 3. Cuidador (Caretaker)
+    javaCode: `// Ejemplo Realista: Control de Versiones Git Local (Workspace & Commits)
 import java.util.Stack;
 
-public class History {
-    private Stack<EditorMemento> history = new Stack<>();
-    private Editor editor;
+public final class FileSnapshot {
+    private final String content;
 
-    public History(Editor editor) {
-        this.editor = editor;
+    public FileSnapshot(String content) {
+        this.content = content;
     }
 
-    public void backup() {
-        history.push(editor.save());
+    public String getContent() {
+        return content;
+    }
+}
+
+public class GitWorkspace {
+    private String contentFile;
+
+    public void setContentFile(String contentFile) {
+        this.contentFile = contentFile;
     }
 
-    public void undo() {
-        if (!history.isEmpty()) {
-            EditorMemento memento = history.pop();
-            editor.restore(memento);
-        } else {
-            System.out.println("Historial vacío. No se puede deshacer.");
+    public String getContentFile() {
+        return contentFile;
+    }
+
+    public FileSnapshot commit() {
+        return new FileSnapshot(contentFile);
+    }
+
+    public void checkout(FileSnapshot snapshot) {
+        if (snapshot != null) {
+            this.contentFile = snapshot.getContent();
         }
     }
 }
 
-// 4. Cliente
+public class GitHistory {
+    private final Stack<FileSnapshot> commits = new Stack<>();
+    private final GitWorkspace workspace;
+
+    public GitHistory(GitWorkspace workspace) {
+        this.workspace = workspace;
+    }
+
+    public void saveCommit() {
+        System.out.println("[GitHistory] Guardando Commit en repositorio local...");
+        commits.push(workspace.commit());
+    }
+
+    public void checkoutLastCommit() {
+        if (!commits.isEmpty()) {
+            System.out.println("[GitHistory] Restaurando última versión del código...");
+            workspace.checkout(commits.pop());
+        } else {
+            System.out.println("[GitHistory] No hay commits disponibles para restaurar.");
+        }
+    }
+}
+
 public class Main {
     public static void main(String[] args) {
-        Editor editor = new Editor();
-        History history = new History(editor);
+        GitWorkspace workspace = new GitWorkspace();
+        GitHistory history = new GitHistory(workspace);
 
-        editor.setContent("Versión 1: Párrafo inicial.");
-        history.backup(); // Guardamos V1
-        System.out.println("Estado actual: " + editor.getContent());
+        workspace.setContentFile("v1: public class App {}");
+        history.saveCommit();
 
-        editor.setContent("Versión 2: Modificación del texto.");
-        history.backup(); // Guardamos V2
-        System.out.println("Estado actual: " + editor.getContent());
+        workspace.setContentFile("v2: public class App { public void run() {} }");
+        System.out.println("Estado actual del archivo: " + workspace.getContentFile());
 
-        editor.setContent("Versión 3: Texto final destructivo.");
-        System.out.println("Estado actual: " + editor.getContent());
-
-        // Deshacer una vez (Volver a V2)
-        history.undo();
-        System.out.println("Deshacer 1: " + editor.getContent());
-
-        // Deshacer otra vez (Volver a V1)
-        history.undo();
-        System.out.println("Deshacer 2: " + editor.getContent());
+        history.checkoutLastCommit();
+        System.out.println("Estado restaurado del archivo: " + workspace.getContentFile());
     }
 }`,
     flow: `sequenceDiagram
     participant Cliente
-    participant Originador as Editor
-    participant Cuidador as History
-    participant Memento as EditorMemento
+    participant Workspace as GitWorkspace
+    participant History as GitHistory
+    participant Commit as FileSnapshot
 
-    Cliente->>Originador: setContent("Texto 1")
-    Cliente->>Cuidador: backup()
-    Cuidador->>Originador: save()
-    create participant Memento
-    Originador->>Memento: new EditorMemento("Texto 1")
-    Originador-->>Cuidador: memento
-    Cuidador->>Cuidador: Guardar en pila
-    Note over Originador: El estado cambia a "Texto 2"
-    Cliente->>Cuidador: undo()
-    Cuidador->>Cuidador: Sacar de pila
-    Cuidador->>Originador: restore(memento)
-    Originador->>Memento: getContent()
-    Memento-->>Originador: "Texto 1"
-    Note over Originador: Estado restaurado`,
+    Cliente->>Workspace: setContent("v1")
+    Cliente->>History: saveCommit()
+    History->>Workspace: commit()
+    create participant Commit
+    Workspace->>Commit: new FileSnapshot("v1")
+    Workspace-->>History: Snapshot
+    History->>History: Guardar en pila
+    Cliente->>History: checkoutLastCommit()
+    History->>Workspace: checkout(Snapshot)
+    Workspace->>Commit: getContent()
+    Commit-->>Workspace: "v1"`,
     realCase: {
       descripcion: "Muy utilizado en utilidades de recuperación y sistemas de control de versiones.",
       ejemplos: [
@@ -950,21 +957,20 @@ public class Main {
       analogia: "Una suscripción a un canal de YouTube: En vez de entrar todos los días al canal a revisar si hay un nuevo video, te suscribes. Cuando el creador de contenido (Sujeto) sube un video, YouTube notifica a todos los suscriptores (Observadores) de forma automática."
     },
     uml: `classDiagram
-    class Subject {
-        -observers: List~Observer~
-        +attach(o: Observer)
-        +detach(o: Observer)
-        +notify()
+    class ServiceEventBus {
+        -subscribers: List
+        +subscribe(o: EventSubscriber)
+        +publish(event: String)
     }
-    class Observer {
+    class EventSubscriber {
         <<interface>>
-        +update(state: String)
+        +onEvent(event: String)
     }
-    class ConcreteObserver {
-        +update(state: String)
+    class EmailService {
+        +onEvent(event: String)
     }
-    Subject --> Observer
-    Observer <|.. ConcreteObserver`,
+    ServiceEventBus --> EventSubscriber
+    EventSubscriber <|.. EmailService`,
     components: [
       { clase: "Subject / Publisher (Sujeto / Emisor)", responsabilidad: "Mantiene la lista de observadores y provee métodos para suscribirse, desuscribirse y notificar cambios." },
       { clase: "Observer / Subscriber (Observador / Suscriptor)", responsabilidad: "Declara la interfaz de actualización, usualmente un método update() que recibe información del evento." },
@@ -978,95 +984,64 @@ public class Main {
       { titulo: "Notificaciones desordenadas", descripcion: "Los observadores son notificados en un orden aleatorio o no garantizado.", },
       { titulo: "Fugas de memoria (Lapsed Listener)", descripcion: "Si los observadores no se desuscriben al destruirse, el Sujeto mantiene referencias a ellos evitando que el Garbage Collector los libere." }
     ],
-    javaCode: `// 1. Interfaz Observer
-public interface Observer {
-    void update(String news);
-}
-
-// 2. Clase Sujeto (Subject)
+    javaCode: `// Ejemplo Realista: Bus de Eventos Reactivo en Microservicios
 import java.util.ArrayList;
 import java.util.List;
 
-public class NewsAgency {
-    private List<Observer> observers = new ArrayList<>();
-    private String latestNews;
+public interface EventListener {
+    void onEvent(String eventType, String payload);
+}
 
-    public void addObserver(Observer observer) {
-        observers.add(observer);
+public class MicroserviceEventBus {
+    private final List<EventListener> listeners = new ArrayList<>();
+
+    public void register(EventListener listener) {
+        listeners.add(listener);
     }
 
-    public void removeObserver(Observer observer) {
-        observers.remove(observer);
-    }
-
-    public void setNews(String news) {
-        this.latestNews = news;
-        notifyAllObservers();
-    }
-
-    private void notifyAllObservers() {
-        for (Observer observer : observers) {
-            observer.update(latestNews);
+    public void emit(String eventType, String payload) {
+        System.out.println("[EventBus] Evento emitido: " + eventType + " -> notifying subscribers...");
+        for (EventListener listener : listeners) {
+            listener.onEvent(eventType, payload);
         }
     }
 }
 
-// 3. Observadores Concretos
-public class EmailSubscriber implements Observer {
-    private String email;
-
-    public EmailSubscriber(String email) {
-        this.email = email;
-    }
-
+public class EmailNotificationService implements EventListener {
     @Override
-    public void update(String news) {
-        System.out.println("Email enviado a " + email + " con la noticia: " + news);
+    public void onEvent(String eventType, String payload) {
+        if ("ORDER_CREATED".equals(eventType)) {
+            System.out.println("[EmailService] Enviando correo de confirmación para el pedido: " + payload);
+        }
     }
 }
 
-public class MobileAppSubscriber implements Observer {
-    private String userId;
-
-    public MobileAppSubscriber(String userId) {
-        this.userId = userId;
-    }
-
+public class LogisticsService implements EventListener {
     @Override
-    public void update(String news) {
-        System.out.println("Notificación Push enviada al usuario " + userId + ": " + news);
+    public void onEvent(String eventType, String payload) {
+        if ("ORDER_CREATED".equals(eventType)) {
+            System.out.println("[LogisticsService] Preparando empaquetado para envío de: " + payload);
+        }
     }
 }
 
-// 4. Cliente
 public class Main {
     public static void main(String[] args) {
-        NewsAgency agencia = new NewsAgency();
+        MicroserviceEventBus bus = new MicroserviceEventBus();
+        bus.register(new EmailNotificationService());
+        bus.register(new LogisticsService());
 
-        Observer sub1 = new EmailSubscriber("carlos@test.com");
-        Observer sub2 = new MobileAppSubscriber("user_992");
-
-        agencia.addObserver(sub1);
-        agencia.addObserver(sub2);
-
-        System.out.println("--- Agencia publica noticia ---");
-        agencia.setNews("¡Se descubre una nueva patente de patrones de comportamiento!");
-
-        System.out.println("\\n--- Agencia remueve un suscriptor y publica de nuevo ---");
-        agencia.removeObserver(sub1);
-        agencia.setNews("Nueva versión de Java lanzada hoy.");
+        // Emitir un evento
+        bus.emit("ORDER_CREATED", "Orden #8992-Laptop");
     }
 }`,
     flow: `sequenceDiagram
-    participant Agencia as NewsAgency
-    participant Sub1 as EmailSubscriber
-    participant Sub2 as MobileAppSubscriber
+    participant Bus as EventBus
+    participant Email as EmailService
+    participant Logistics as LogisticsService
 
-    Note over Agencia: setNews("¡Nueva Noticia!")
-    Agencia->>Sub1: update("¡Nueva Noticia!")
-    Note over Sub1: Procesa envío de correo
-    Agencia->>Sub2: update("¡Nueva Noticia!")
-    Note over Sub2: Muestra alerta push`,
+    Bus->>Email: onEvent("ORDER_CREATED", "Orden #8992")
+    Bus->>Logistics: onEvent("ORDER_CREATED", "Orden #8992")`,
     realCase: {
       descripcion: "Es un pilar fundamental en arquitecturas reactivas y manejo de eventos.",
       ejemplos: [
@@ -1082,7 +1057,7 @@ public class Main {
     englishName: "Estado",
     concept: {
       definicion: "Permite a un objeto alterar su comportamiento cuando su estado interno cambia. El objeto parecerá cambiar de clase.",
-      ideaCentral: "Extraer los comportamientos específicos de cada estado a clases independientes que implementan una interfaz común, y delegar el trabajo al estado activo actual.",
+      ideaCentral: "Extraer los comportamientos específicos de cada estado a clases independientes que implementan una interfaz común, y delegar el trabajo al estado activo de forma polimórfica.",
       problema: "Cuando una clase tiene una máquina de estados compleja (como un pedido de compras con estados: Pendiente, Pagado, Enviado, Cancelado), su código se llena de condicionales gigantescos (if-else o switch) que validan el estado antes de cada acción. Añadir un nuevo estado requiere alterar todos los métodos de la clase.",
       cuandoUsar: [
         "Cuando tengas un objeto que se comporta de forma diferente dependiendo de su estado actual, el número de estados sea enorme y el código del estado cambie con frecuencia.",
@@ -1091,31 +1066,28 @@ public class Main {
       analogia: "El botón de bloqueo de un smartphone: Si la pantalla está apagada, pulsar el botón enciende la pantalla (Estado Apagado). Si la pantalla está encendida pero bloqueada, pulsar el botón apaga la pantalla (Estado Bloqueado). Si la pantalla está desbloqueada y en uso, pulsar el botón bloquea y apaga el teléfono (Estado Activo)."
     },
     uml: `classDiagram
-    class State {
+    class OrderState {
         <<interface>>
-        +insertCoin(context: VendingMachine) void
-        +pressButton(context: VendingMachine) void
-        +dispense(context: VendingMachine) void
+        +pay(order: Order)
+        +ship(order: Order)
     }
-    class NoCoinState {
-        +insertCoin(context: VendingMachine) void
-        +pressButton(context: VendingMachine) void
-        +dispense(context: VendingMachine) void
+    class CreatedState {
+        +pay(order: Order)
+        +ship(order: Order)
     }
-    class CoinInsertedState {
-        +insertCoin(context: VendingMachine) void
-        +pressButton(context: VendingMachine) void
-        +dispense(context: VendingMachine) void
+    class PaidState {
+        +pay(order: Order)
+        +ship(order: Order)
     }
-    class VendingMachine {
-        -state: State
-        +setState(state: State)
-        +insertCoin() void
-        +pressButton() void
+    class Order {
+        -state: OrderState
+        +setState(state: OrderState)
+        +processPayment()
+        +shipOrder()
     }
-    VendingMachine --> State
-    State <|.. NoCoinState
-    State <|.. CoinInsertedState`,
+    Order --> OrderState
+    OrderState <|.. CreatedState
+    OrderState <|.. PaidState`,
     components: [
       { clase: "Context (Contexto)", responsabilidad: "Mantiene la referencia a una instancia de un estado concreto y delega en ella todo el trabajo específico del estado." },
       { clase: "State (Interfaz Estado)", responsabilidad: "Declara los métodos para todas las acciones posibles del contexto en cualquier estado." },
@@ -1129,130 +1101,100 @@ public class Main {
     disadvantages: [
       { titulo: "Sobrediseño", descripcion: "Aplicar el patrón puede ser excesivo si la máquina de estados es extremadamente simple y rara vez cambia." }
     ],
-    javaCode: `// 1. Interfaz State
-public interface State {
-    void insertCoin(VendingMachine machine);
-    void pressButton(VendingMachine machine);
-    void dispense(VendingMachine machine);
+    javaCode: `// Ejemplo Realista: Ciclo de vida de una Orden de E-Commerce (Creada -> Pagada -> Enviada)
+public interface OrderState {
+    void processPayment(OrderContext order);
+    void shipOrder(OrderContext order);
 }
 
-// 2. Clase Contexto
-public class VendingMachine {
-    private State currentState;
-
-    public VendingMachine() {
-        // Estado inicial
-        this.currentState = new NoCoinState();
+public class CreatedState implements OrderState {
+    @Override
+    public void processPayment(OrderContext order) {
+        System.out.println("[State: Created] Pago procesado correctamente de forma electrónica.");
+        order.setState(new PaidState());
     }
 
-    public void setState(State state) {
+    @Override
+    public void shipOrder(OrderContext order) {
+        System.out.println("[State: Created] Error: No se puede enviar un pedido sin pagar.");
+    }
+}
+
+public class PaidState implements OrderState {
+    @Override
+    public void processPayment(OrderContext order) {
+        System.out.println("[State: Paid] Error: El pedido ya fue pagado.");
+    }
+
+    @Override
+    public void shipOrder(OrderContext order) {
+        System.out.println("[State: Paid] Despachando pedido de almacén...");
+        order.setState(new ShippedState());
+    }
+}
+
+public class ShippedState implements OrderState {
+    @Override
+    public void processPayment(OrderContext order) {
+        System.out.println("[State: Shipped] Error: Pedido ya pagado y despachado.");
+    }
+
+    @Override
+    public void shipOrder(OrderContext order) {
+        System.out.println("[State: Shipped] Error: El pedido ya está en ruta de entrega.");
+    }
+}
+
+public class OrderContext {
+    private OrderState currentState;
+
+    public OrderContext() {
+        this.currentState = new CreatedState();
+    }
+
+    public void setState(OrderState state) {
         this.currentState = state;
     }
 
-    public void insertCoin() {
-        currentState.insertCoin(this);
+    public void executePayment() {
+        currentState.processPayment(this);
     }
 
-    public void pressButton() {
-        currentState.pressButton(this);
-    }
-
-    public void dispense() {
-        currentState.dispense(this);
+    public void executeShipping() {
+        currentState.shipOrder(this);
     }
 }
 
-// 3. Estados Concretos
-public class NoCoinState implements State {
-    @Override
-    public void insertCoin(VendingMachine machine) {
-        System.out.println("Moneda insertada correctamente.");
-        machine.setState(new CoinInsertedState());
-    }
-
-    @Override
-    public void pressButton(VendingMachine machine) {
-        System.out.println("Error: No puedes comprar sin insertar una moneda primero.");
-    }
-
-    @Override
-    public void dispense(VendingMachine machine) {
-        System.out.println("Error: Inserta una moneda primero.");
-    }
-}
-
-public class CoinInsertedState implements State {
-    @Override
-    public void insertCoin(VendingMachine machine) {
-        System.out.println("Moneda ya insertada. No puedes ingresar otra.");
-    }
-
-    @Override
-    public void pressButton(VendingMachine machine) {
-        System.out.println("Botón presionado. Dispensando producto...");
-        machine.setState(new ProductDeliveredState());
-    }
-
-    @Override
-    public void dispense(VendingMachine machine) {
-        System.out.println("Presiona el botón para dispensar.");
-    }
-}
-
-public class ProductDeliveredState implements State {
-    @Override
-    public void insertCoin(VendingMachine machine) {
-        System.out.println("Espera a recibir tu producto actual.");
-    }
-
-    @Override
-    public void pressButton(VendingMachine machine) {
-        System.out.println("Ya has ordenado. Dispensando...");
-    }
-
-    @Override
-    public void dispense(VendingMachine machine) {
-        System.out.println("Producto entregado. ¡Gracias por su compra!");
-        machine.setState(new NoCoinState());
-    }
-}
-
-// 4. Cliente
 public class Main {
     public static void main(String[] args) {
-        VendingMachine maquina = new VendingMachine();
+        OrderContext pedido = new OrderContext();
+        
+        System.out.println("--- Intento de envío inicial ---");
+        pedido.executeShipping();
 
-        System.out.println("--- Intento de compra inicial ---");
-        maquina.pressButton();
+        System.out.println("\\n--- Procesando pago ---");
+        pedido.executePayment();
 
-        System.out.println("\\n--- Ingresar moneda y comprar ---");
-        maquina.insertCoin();
-        maquina.pressButton();
-        maquina.dispense();
-
-        System.out.println("\\n--- Comprobar retorno a estado inicial ---");
-        maquina.pressButton();
+        System.out.println("\\n--- Intentando enviar ahora ---");
+        pedido.executeShipping();
     }
 }`,
     flow: `sequenceDiagram
     participant Cliente
-    participant Context as VendingMachine
-    participant NoCoin as NoCoinState
-    participant CoinIn as CoinInsertedState
+    participant Context as OrderContext
+    participant Created as CreatedState
+    participant Paid as PaidState
 
-    Cliente->>Context: insertCoin()
-    Context->>NoCoin: insertCoin(this)
-    NoCoin->>Context: setState(CoinInsertedState)
-    Note over Context: Estado ahora es CoinInsertedState
-    Cliente->>Context: pressButton()
-    Context->>CoinIn: pressButton(this)
-    Note over CoinIn: Realiza compra y cambia estado`,
+    Cliente->>Context: executePayment()
+    Context->>Created: processPayment(this)
+    Created->>Context: setState(PaidState)
+    Note over Context: Estado actualiza a PaidState`,
     realCase: {
       descripcion: "Se utiliza en sistemas de negocio con flujos de aprobación y lógicas de automatización de estados.",
       ejemplos: [
         "Máquinas expendedoras físicas e interfaces de cajero automático (ATM).",
         "Sistemas de gestión de pedidos (E-commerce): Carrito -> Procesando -> Enviado -> Entregado.",
-        "Inteligencia Artificial de enemigos en videojuegos: Patrullar -> Perseguir -> Atacar -> Huir."
+        "Inteligencia Actorial de enemigos en videojuegos: Patrullar -> Perseguir -> Atacar -> Huir."
       ]
     }
   },
@@ -1272,24 +1214,24 @@ public class Main {
       analogia: "Viajar al aeropuerto: Puedes ir en autobús, en taxi, en tren o en tu propio coche. Cada una es una estrategia para llegar a tu destino. Eliges la estrategia en función de tu presupuesto, tiempo y comodidad."
     },
     uml: `classDiagram
-    class Strategy {
+    class TaxStrategy {
         <<interface>>
-        +execute(a: int, b: int) int
+        +calculateTax(amount: double) double
     }
-    class ConcreteStrategyAdd {
-        +execute(a: int, b: int) int
+    class USTaxCalculation {
+        +calculateTax(amount: double) double
     }
-    class ConcreteStrategySubtract {
-        +execute(a: int, b: int) int
+    class EUTaxCalculation {
+        +calculateTax(amount: double) double
     }
-    class Context {
-        -strategy: Strategy
-        +setStrategy(strategy: Strategy)
-        +executeStrategy(a: int, b: int) int
+    class TaxCalculatorContext {
+        -strategy: TaxStrategy
+        +setStrategy(strategy: TaxStrategy)
+        +calculate(amount: double) double
     }
-    Context --> Strategy
-    Strategy <|.. ConcreteStrategyAdd
-    Strategy <|.. ConcreteStrategySubtract`,
+    TaxCalculatorContext --> TaxStrategy
+    TaxStrategy <|.. USTaxCalculation
+    TaxStrategy <|.. EUTaxCalculation`,
     components: [
       { clase: "Context (Contexto)", responsabilidad: "Mantiene la referencia a una estrategia concreta y se comunica con ella exclusivamente a través de la interfaz Strategy." },
       { clase: "Strategy (Interfaz Estrategia)", responsabilidad: "Declara el método común para todas las estrategias concretas admitidas." },
@@ -1304,111 +1246,69 @@ public class Main {
       { titulo: "Complejidad innecesaria", descripcion: "Si solo tienes un par de algoritmos que rara vez cambian, introducir el patrón complica el diseño sin necesidad." },
       { titulo: "Conocimiento del cliente", descripcion: "Los clientes deben conocer la diferencia entre las distintas estrategias para poder elegir la adecuada." }
     ],
-    javaCode: `// 1. Interfaz Strategy
-public interface PaymentStrategy {
-    void collectPaymentDetails();
-    boolean validatePaymentDetails();
-    void pay(double amount);
+    javaCode: `// Ejemplo Realista: Calculadora de Impuestos Internacionales en Facturación
+public interface TaxStrategy {
+    double calculateTax(double amount);
 }
 
-// 2. Estrategia Concreta: Tarjeta
-public class CreditCardPayment implements PaymentStrategy {
-    private String cardNumber;
-    private String cvv;
-
-    public CreditCardPayment(String cardNumber, String cvv) {
-        this.cardNumber = cardNumber;
-        this.cvv = cvv;
-    }
-
+// Estrategia 1: Impuestos Estados Unidos
+public class USTaxCalculation implements TaxStrategy {
     @Override
-    public void collectPaymentDetails() {
-        System.out.println("Obteniendo datos de tarjeta...");
-    }
-
-    @Override
-    public boolean validatePaymentDetails() {
-        return cardNumber.length() == 16 && cvv.length() == 3;
-    }
-
-    @Override
-    public void pay(double amount) {
-        System.out.println("Pagando $" + amount + " con Tarjeta de Crédito.");
+    public double calculateTax(double amount) {
+        return amount * 0.08; // 8% tax rate
     }
 }
 
-// 3. Estrategia Concreta: PayPal
-public class PayPalPayment implements PaymentStrategy {
-    private String email;
-
-    public PayPalPayment(String email) {
-        this.email = email;
-    }
-
+// Estrategia 2: Impuestos Unión Europea (VAT)
+public class EUTaxCalculation implements TaxStrategy {
     @Override
-    public void collectPaymentDetails() {
-        System.out.println("Abriendo ventana de inicio de sesión de PayPal...");
-    }
-
-    @Override
-    public boolean validatePaymentDetails() {
-        return email.contains("@");
-    }
-
-    @Override
-    public void pay(double amount) {
-        System.out.println("Pagando $" + amount + " mediante la cuenta PayPal: " + email);
+    public double calculateTax(double amount) {
+        return amount * 0.20; // 20% VAT rate
     }
 }
 
-// 4. Contexto
-public class ShoppingCart {
-    private PaymentStrategy paymentStrategy;
+// Contexto
+public class InvoiceCalculator {
+    private TaxStrategy taxStrategy;
 
-    public void setPaymentStrategy(PaymentStrategy strategy) {
-        this.paymentStrategy = strategy;
+    public void setTaxStrategy(TaxStrategy taxStrategy) {
+        this.taxStrategy = taxStrategy;
     }
 
-    public void checkout(double amount) {
-        if (paymentStrategy == null) {
-            System.out.println("Error: Por favor, selecciona un método de pago.");
-            return;
+    public double calculateTotalInvoice(double netAmount) {
+        if (taxStrategy == null) {
+            throw new IllegalStateException("Estrategia de impuestos no seleccionada.");
         }
-        paymentStrategy.collectPaymentDetails();
-        if (paymentStrategy.validatePaymentDetails()) {
-            paymentStrategy.pay(amount);
-        } else {
-            System.out.println("Pago rechazado: Datos de pago inválidos.");
-        }
+        double tax = taxStrategy.calculateTax(netAmount);
+        return netAmount + tax;
     }
 }
 
-// 5. Cliente
 public class Main {
     public static void main(String[] args) {
-        ShoppingCart cart = new ShoppingCart();
+        InvoiceCalculator calculator = new InvoiceCalculator();
 
-        System.out.println("--- Compra 1 con Tarjeta ---");
-        cart.setPaymentStrategy(new CreditCardPayment("1234567890123456", "123"));
-        cart.checkout(450.0);
+        // Calcular factura para cliente en Estados Unidos
+        calculator.setTaxStrategy(new USTaxCalculation());
+        double totalUS = calculator.calculateTotalInvoice(100.0);
+        System.out.println("Total factura (US): $" + totalUS);
 
-        System.out.println("\\n--- Compra 2 con PayPal ---");
-        cart.setPaymentStrategy(new PayPalPayment("cliente@correo.com"));
-        cart.checkout(99.90);
+        // Calcular factura para cliente en Unión Europea
+        calculator.setTaxStrategy(new EUTaxCalculation());
+        double totalEU = calculator.calculateTotalInvoice(100.0);
+        System.out.println("Total factura (EU): $" + totalEU);
     }
 }`,
     flow: `sequenceDiagram
     participant Cliente
-    participant Context as ShoppingCart
-    participant Strategy as CreditCardPayment
+    participant Context as InvoiceCalculator
+    participant Strategy as USTaxCalculation
 
-    Cliente->>Context: setPaymentStrategy(CreditCardPayment)
-    Cliente->>Context: checkout(450.0)
-    Context->>Strategy: collectPaymentDetails()
-    Context->>Strategy: validatePaymentDetails()
-    Strategy-->>Context: true
-    Context->>Strategy: pay(450.0)
-    Strategy-->>Context: Confirmación Pago`,
+    Cliente->>Context: setTaxStrategy(USTaxCalculation)
+    Cliente->>Context: calculateTotalInvoice(100)
+    Context->>Strategy: calculateTax(100)
+    Strategy-->>Context: 8.00
+    Context-->>Cliente: 108.00`,
     realCase: {
       descripcion: "Es de los patrones más implementados para encapsular variaciones de algoritmos comerciales o matemáticos.",
       ejemplos: [
@@ -1433,22 +1333,23 @@ public class Main {
       analogia: "La construcción de casas prefabricadas: La constructora tiene una estructura/plano estándar (Método Plantilla) que define los pasos: cimentar, levantar paredes, techar, pintar. El comprador puede elegir materiales y colores para las paredes y pintura (pasos redefinibles), pero el orden y esqueleto base es inalterable."
     },
     uml: `classDiagram
-    class AbstractClass {
-        +templateMethod() void
-        #step1() void*
-        #step2() void*
-        #step3() void
+    class DataETLProcessor {
+        <<abstract>>
+        +process()
+        #readData()
+        #transformData()
+        #saveData()
     }
-    class ConcreteClassA {
-        #step1() void
-        #step2() void
+    class JSONETLProcessor {
+        #readData()
+        #transformData()
     }
-    class ConcreteClassB {
-        #step1() void
-        #step2() void
+    class CSVETLProcessor {
+        #readData()
+        #transformData()
     }
-    AbstractClass <|-- ConcreteClassA
-    AbstractClass <|-- ConcreteClassB`,
+    DataETLProcessor <|-- JSONETLProcessor
+    DataETLProcessor <|-- CSVETLProcessor`,
     components: [
       { clase: "AbstractClass (Clase Abstracta)", responsabilidad: "Declara los pasos del algoritmo y define el templateMethod() que llama a dichos pasos en un orden estricto." },
       { clase: "ConcreteClass (Clases Concretas)", responsabilidad: "Sobrescriben las operaciones abstractas para proporcionar la lógica específica de cada paso del algoritmo." }
@@ -1461,91 +1362,66 @@ public class Main {
       { titulo: "Limitación del esqueleto", descripcion: "Algunos clientes pueden sentirse limitados por el esqueleto rígido del algoritmo original." },
       { titulo: "Violación de Liskov (potencial)", descripcion: "Si se sobrescriben métodos de paso obligatorios de forma inapropiada, se puede romper el funcionamiento esperado de la clase base." }
     ],
-    javaCode: `// 1. Clase Abstracta con Método Plantilla
-public abstract class DataMiner {
-    // El Método Plantilla (es final para evitar que sea modificado)
-    public final void mineData(String path) {
-        openFile(path);
-        extractData();
-        parseData();
-        analyzeData();
-        closeFile();
+    javaCode: `// Ejemplo Realista: Pipeline ETL (Extract, Transform, Load) de Archivos
+public abstract class ETLDataPipeline {
+    // Método Plantilla
+    public final void runETL() {
+        extract();
+        transform();
+        load();
     }
 
-    // Pasos comunes con implementación por defecto
-    protected void analyzeData() {
-        System.out.println("Analizando datos extraídos con algoritmo estándar...");
-    }
+    protected abstract void extract();
+    protected abstract void transform();
 
-    protected void closeFile() {
-        System.out.println("Cerrando archivo de datos.");
-    }
-
-    // Pasos abstractos que cada subclase debe definir
-    protected abstract void openFile(String path);
-    protected abstract void extractData();
-    protected abstract void parseData();
-}
-
-// 2. Subclase Concreta: Procesador PDF
-public class PdfDataMiner extends DataMiner {
-    @Override
-    protected void openFile(String path) {
-        System.out.println("Abriendo archivo PDF desde: " + path);
-    }
-
-    @Override
-    protected void extractData() {
-        System.out.println("Extrayendo flujo de bytes del PDF...");
-    }
-
-    @Override
-    protected void parseData() {
-        System.out.println("Parseando textos y tablas del PDF...");
+    protected void load() {
+        System.out.println("[ETL Pipeline] Guardando datos unificados en Base de Datos de Producción.");
     }
 }
 
-// 3. Subclase Concreta: Procesador CSV
-public class CsvDataMiner extends DataMiner {
+public class CSVETLPipeline extends ETLDataPipeline {
     @Override
-    protected void openFile(String path) {
-        System.out.println("Abriendo archivo CSV de texto plano: " + path);
+    protected void extract() {
+        System.out.println("[CSV Pipeline] Extrayendo líneas y separando campos por comas del archivo CSV...");
     }
 
     @Override
-    protected void extractData() {
-        System.out.println("Extrayendo líneas de texto del CSV...");
-    }
-
-    @Override
-    protected void parseData() {
-        System.out.println("Parseando valores separados por comas (CSV)...");
+    protected void transform() {
+        System.out.println("[CSV Pipeline] Limpiando correos y estandarizando números telefónicos...");
     }
 }
 
-// 4. Cliente
+public class JSONETLPipeline extends ETLDataPipeline {
+    @Override
+    protected void extract() {
+        System.out.println("[JSON Pipeline] Parseando objetos de texto estructurado del archivo JSON...");
+    }
+
+    @Override
+    protected void transform() {
+        System.out.println("[JSON Pipeline] Convirtiendo tipos de variables según esquema...");
+    }
+}
+
 public class Main {
     public static void main(String[] args) {
-        System.out.println("=== Minando Datos de PDF ===");
-        DataMiner pdfMiner = new PdfDataMiner();
-        pdfMiner.mineData("documento_financiero.pdf");
+        System.out.println("--- Iniciando proceso ETL de Ventas (CSV) ---");
+        ETLDataPipeline csvJob = new CSVETLPipeline();
+        csvJob.runETL();
 
-        System.out.println("\\n=== Minando Datos de CSV ===");
-        DataMiner csvMiner = new CsvDataMiner();
-        csvMiner.mineData("ventas_mensuales.csv");
+        System.out.println("\\n--- Iniciando proceso ETL de Clientes (JSON) ---");
+        ETLDataPipeline jsonJob = new JSONETLPipeline();
+        jsonJob.runETL();
     }
 }`,
     flow: `sequenceDiagram
     participant Cliente
-    participant Template as DataMiner (PdfDataMiner)
+    participant Pipeline as CSVETLPipeline
 
-    Cliente->>Template: mineData("doc.pdf")
-    Template->>Template: openFile("doc.pdf") (PDF implementation)
-    Template->>Template: extractData() (PDF implementation)
-    Template->>Template: parseData() (PDF implementation)
-    Template->>Template: analyzeData() (Standard implementation)
-    Template->>Template: closeFile() (Standard implementation)
-    Template-->>Cliente: Fin del proceso`,
+    Cliente->>Pipeline: runETL()
+    Pipeline->>Pipeline: extract()
+    Pipeline->>Pipeline: transform()
+    Pipeline->>Pipeline: load() (base class implementation)`,
     realCase: {
       descripcion: "Es la base del diseño de frameworks orientados a objetos, donde el framework define el ciclo de vida y tú inyectas el código.",
       ejemplos: [
@@ -1571,26 +1447,23 @@ public class Main {
       analogia: "Un inspector de salud visitando negocios: El inspector (Visitante) va a un restaurante, a una escuela y a un hospital (Elementos). Cada local lo recibe (accept) y le da acceso a sus instalaciones. El inspector aplica sus conocimientos específicos para revisar las cocinas del restaurante o las salas de hospital, sin que los locales cambien su funcionamiento diario."
     },
     uml: `classDiagram
-    class Element {
+    class ASTNode {
         <<interface>>
-        +accept(v: Visitor) void
+        +accept(v: Visitor)
     }
-    class ConcreteElementA {
-        +accept(v: Visitor) void
-        +operationA() void
+    class ClassNode {
+        +accept(v: Visitor)
+        +getClassName() String
     }
-    class Visitor {
+    class ASTVisitor {
         <<interface>>
-        +visit(a: ConcreteElementA) void
-        +visit(b: ConcreteElementB) void
+        +visit(c: ClassNode)
     }
-    class ConcreteVisitor {
-        +visit(a: ConcreteElementA) void
-        +visit(b: ConcreteElementB) void
+    class LinterVisitor {
+        +visit(c: ClassNode)
     }
-    Element ..> Visitor
-    Visitor <|.. ConcreteVisitor
-    ConcreteElementA ..|> Element`,
+    ASTNode <|.. ClassNode
+    ASTVisitor <|.. LinterVisitor`,
     components: [
       { clase: "Element (Interfaz Elemento)", responsabilidad: "Declara un método accept(visitor) que toma la interfaz del visitante como argumento." },
       { clase: "ConcreteElement (Elementos Concretos)", responsabilidad: "Implementan el método accept(). Éste redirige la llamada al método de visita correspondiente del objeto visitante (Double Dispatch)." },
@@ -1606,97 +1479,67 @@ public class Main {
       { titulo: "Acoplamiento inverso", descripcion: "Debes actualizar todos los visitantes si se añade o se elimina una clase de elemento de la estructura." },
       { titulo: "Acceso limitado", descripcion: "Los visitantes pueden carecer del acceso necesario a los campos privados de los elementos con los que trabajan." }
     ],
-    javaCode: `// 1. Interfaz Elemento
-public interface Shape {
-    void accept(Visitor visitor);
+    javaCode: `// Ejemplo Realista: Linter/Validador de Código en un Compilador (Nodos AST)
+public interface ASTNode {
+    void accept(ASTVisitor visitor);
 }
 
-// 2. Elementos Concretos
-public class Circle implements Shape {
-    private double radius;
+public class ClassNode implements ASTNode {
+    private final String className;
 
-    public Circle(double radius) {
-        this.radius = radius;
+    public ClassNode(String className) {
+        this.className = className;
     }
 
-    public double getRadius() {
-        return radius;
-    }
+    public String getClassName() { return className; }
 
     @Override
-    public void accept(Visitor visitor) {
-        visitor.visitCircle(this);
+    public void accept(ASTVisitor visitor) {
+        visitor.visitClass(this);
     }
 }
 
-public class Rectangle implements Shape {
-    private double width;
-    private double height;
+public interface ASTVisitor {
+    void visitClass(ClassNode node);
+}
 
-    public Rectangle(double width, double height) {
-        this.width = width;
-        this.height = height;
-    }
-
-    public double getWidth() {
-        return width;
-    }
-
-    public double getHeight() {
-        return height;
-    }
-
+// Analizador Linter de Reglas de Nomenclatura
+public class NamingConventionLinter implements ASTVisitor {
     @Override
-    public void accept(Visitor visitor) {
-        visitor.visitRectangle(this);
+    public void visitClass(ClassNode node) {
+        System.out.println("[Linter] Analizando nomenclatura de la clase: " + node.getClassName());
+        char firstChar = node.getClassName().charAt(0);
+        if (!Character.isUpperCase(firstChar)) {
+            System.out.println("[Warning] Nombre inválido: " + node.getClassName() + " debe empezar con mayúscula.");
+        } else {
+            System.out.println("[Linter] Clase correcta.");
+        }
     }
 }
 
-// 3. Interfaz Visitante (Visitor)
-public interface Visitor {
-    void visitCircle(Circle circle);
-    void visitRectangle(Rectangle rectangle);
-}
-
-// 4. Visitante Concreto: Exportador de XML
-public class XmlExportVisitor implements Visitor {
-    @Override
-    public void visitCircle(Circle circle) {
-        System.out.println("<circle>\\n  <radius>" + circle.getRadius() + "</radius>\\n</circle>");
-    }
-
-    @Override
-    public void visitRectangle(Rectangle rectangle) {
-        System.out.println("<rectangle>\\n  <width>" + rectangle.getWidth() + "</width>\\n  <height>" 
-            + rectangle.getHeight() + "</height>\\n</rectangle>");
-    }
-}
-
-// 5. Cliente
 public class Main {
     public static void main(String[] args) {
-        Shape[] shapes = new Shape[] {
-            new Circle(5.0),
-            new Rectangle(10.0, 4.0)
+        ASTNode[] nodes = new ASTNode[] {
+            new ClassNode("UsuarioService"),
+            new ClassNode("servicioFacturacion")
         };
 
-        Visitor xmlVisitor = new XmlExportVisitor();
-        System.out.println("Exportando figuras a formato XML:");
-        for (Shape shape : shapes) {
-            shape.accept(xmlVisitor);
+        ASTVisitor linter = new NamingConventionLinter();
+        for (ASTNode node : nodes) {
+            node.accept(linter);
         }
     }
 }`,
     flow: `sequenceDiagram
     participant Cliente
-    participant Elemento as Circle
-    participant Visitante as XmlExportVisitor
+    participant Element as ClassNode
+    participant Visitor as NamingLinter
 
-    Cliente->>Elemento: accept(xmlVisitor)
-    Elemento->>Visitante: visitCircle(this)
-    Note over Visitante: Ejecuta lógica XML para Circle
-    Visitante-->>Elemento: void
-    Elemento-->>Cliente: void`,
+    Cliente->>Element: accept(linter)
+    Element->>Visitor: visitClass(this)
+    Note over Visitor: Valida Mayúscula
+    Visitor-->>Element: void
+    Element-->>Cliente: void`,
     realCase: {
       descripcion: "Altamente especializado en operaciones sobre estructuras arbóreas compuestas complejas.",
       ejemplos: [

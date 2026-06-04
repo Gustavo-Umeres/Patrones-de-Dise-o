@@ -5,8 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PATTERNS } from "@/data/patterns";
 import { 
-  Search, BookOpen, GitCompare, HelpCircle, 
-  Award, BookMarked, Home, ChevronRight, Menu, X, Cpu
+  Search, BookOpen, Home, ChevronRight, Menu, X
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -100,25 +99,7 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* Simuladores, Quiz, etc. */}
-        <div className="mt-4 mb-2 px-3 text-xs font-semibold text-slate-400 dark:text-slate-550 uppercase tracking-wider">
-          Interactivo y Extras
-        </div>
-        <NavLink href="/simuladores" icon={Cpu} onClick={() => setIsOpen(false)}>
-          Mini Simuladores
-        </NavLink>
-        <NavLink href="/comparacion" icon={GitCompare} onClick={() => setIsOpen(false)}>
-          Comparación General
-        </NavLink>
-        <NavLink href="/quiz" icon={HelpCircle} onClick={() => setIsOpen(false)}>
-          Quiz Interactivo
-        </NavLink>
-        <NavLink href="/conclusiones" icon={Award} onClick={() => setIsOpen(false)}>
-          Conclusiones
-        </NavLink>
-        <NavLink href="/bibliografia" icon={BookMarked} onClick={() => setIsOpen(false)}>
-          Bibliografía
-        </NavLink>
+        {/* No extras */}
       </div>
     </div>
   );
