@@ -29,11 +29,11 @@ export default function Introduccion() {
         <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white">
           Introducción a los Patrones de Diseño
         </h1>
-        <p className="text-lg text-slate-600 dark:text-slate-450 leading-relaxed">
+        <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
           En ingeniería de software, un <strong>patrón de diseño</strong> es una solución reusable y optimizada para un problema común que ocurre dentro de un contexto dado durante el diseño de software. No es un diseño terminado que se pueda transformar directamente en código; es una plantilla o descripción de cómo resolver un problema que se puede usar en muchas situaciones diferentes.
         </p>
 
-        <div className="flex gap-4 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10 dark:bg-indigo-500/5 dark:border-indigo-500/20 text-slate-700 dark:text-slate-350">
+        <div className="flex gap-4 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10 dark:bg-indigo-500/5 dark:border-indigo-500/20 text-slate-700 dark:text-slate-300">
           <Info className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
           <div className="text-sm leading-relaxed">
             <strong>¿Por qué usarlos?</strong> Ahorran tiempo de desarrollo al proveer paradigmas probados y testeados. Además, mejoran la legibilidad del código para otros programadores que están familiarizados con el catálogo estándar de patrones.
@@ -57,10 +57,10 @@ export default function Introduccion() {
               <Layers className="h-5 w-5" />
             </div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">Creacionales</h3>
-            <p className="text-xs text-slate-550 dark:text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               Conciernen al proceso de creación de objetos. Ayudan a hacer un sistema independiente de cómo se crean, componen y representan sus objetos.
             </p>
-            <ul className="text-xs text-slate-650 dark:text-slate-350 space-y-1.5 list-disc pl-4 font-semibold">
+            <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-disc pl-4 font-semibold">
               <li>Singleton</li>
               <li>Factory Method</li>
               <li>Builder</li>
@@ -75,10 +75,10 @@ export default function Introduccion() {
               <ShieldCheck className="h-5 w-5" />
             </div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">Estructurales</h3>
-            <p className="text-xs text-slate-550 dark:text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               Tratan sobre cómo se componen las clases y objetos para formar estructuras más grandes, garantizando flexibilidad y eficiencia.
             </p>
-            <ul className="text-xs text-slate-650 dark:text-slate-350 space-y-1.5 list-disc pl-4 font-semibold">
+            <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-disc pl-4 font-semibold">
               <li>Adapter</li>
               <li>Decorator</li>
               <li>Facade</li>
@@ -95,10 +95,10 @@ export default function Introduccion() {
               <HeartHandshake className="h-5 w-5" />
             </div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">De Comportamiento</h3>
-            <p className="text-xs text-slate-550 dark:text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               Están relacionados con los algoritmos y la asignación de responsabilidades entre objetos. Es la categoría más grande y el tema principal de esta aplicación.
             </p>
-            <ul className="text-xs text-slate-650 dark:text-slate-350 space-y-1.5 list-disc pl-4 font-bold">
+            <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-disc pl-4 font-bold">
               <li>Observer, Strategy, State</li>
               <li>Chain of Responsibility</li>
               <li>Command, Iterator</li>
@@ -138,7 +138,7 @@ export default function Introduccion() {
             <div className="p-3 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 rounded border border-emerald-500/20">Creación (Creacionales)</div>
             <div className="p-3 bg-blue-500/10 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 rounded border border-blue-500/20">Composición (Estructurales)</div>
             <div className="p-3 bg-indigo-500/15 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 rounded border border-indigo-500/30">Ejecución y Flujo (Comportamiento)</div>
-            <div className="col-span-3 p-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-350 rounded-lg">Resultado Operativo Estable</div>
+            <div className="col-span-3 p-2 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg">Resultado Operativo Estable</div>
           </div>
         </div>
       </motion.section>

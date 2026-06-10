@@ -133,6 +133,7 @@ public abstract class BaseMiddleware implements Middleware {
     }
 }
 
+// EXPOSICIÓN: Destaca cómo el BCP o SUNAT validarían la identidad del contribuyente o cliente aquí.
 // Filtro 1: Autenticación
 public class AuthenticationMiddleware extends BaseMiddleware {
     @Override
@@ -223,9 +224,9 @@ public class Main {
     realCase: {
       descripcion: "Este patrón es el núcleo detrás de los pipelines de procesamiento de peticiones en la web. Al usarlo, cada middleware actúa como un eslabón que decide si abortar la conexión o pasarla al siguiente middleware configurado.",
       ejemplos: [
-        "Filtros de Seguridad de Spring Security (Java).",
-        "Manejo de Middlewares en routers de Express.js y NestJS.",
-        "Pipelines de validación de peticiones HTTP en ASP.NET Core."
+        "BCP: Pipeline de validación de transferencias interbancarias (verificando saldo, fraude y límites de Yape/Plin).",
+        "SUNAT: Filtros de seguridad y validación de comprobantes electrónicos (CPE) pasando por reglas secuenciales.",
+        "Manejo de Middlewares en routers de Express.js y NestJS."
       ],
       codigoResolucion: `// Implementación típica de un Pipeline de Middlewares en Express.js (Node.js)
 const express = require('express');
@@ -406,9 +407,9 @@ public class Main {
     realCase: {
       descripcion: "El patrón Command se utiliza en la arquitectura de interfaces de usuario modernas y sistemas de colas de tareas. Al desacoplar la llamada de la ejecución, es posible realizar operaciones de revertir, registrar historial e incluso procesar comandos de forma asíncrona.",
       ejemplos: [
-        "Despacho de acciones en Redux Toolkit (React) para actualizar estados de forma predecible.",
-        "Colas de tareas distribuidas en segundo plano (como Celery o BullMQ).",
-        "Sistemas de Undo/Redo en editores gráficos o suites de productividad."
+        "Yape / Plin: Guardar intentos de pago offline como 'Comandos' y procesarlos cuando vuelve el internet.",
+        "PedidosYa / Rappi Perú: Encolamiento de órdenes de comida que pueden ser canceladas (Undo) antes de ser preparadas.",
+        "Sistemas de Undo/Redo en interfaces o terminales de bancos peruanos."
       ],
       codigoResolucion: `// Ejemplo de Redux Toolkit en Frontend React para manejar comandos de UI
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
@@ -428,6 +429,7 @@ const editorSlice = createSlice({
   name: 'editor',
   initialState,
   reducers: {
+    // EXPOSICIÓN: Explica que esto es como cuando Yape guarda el pago en la cola para procesarlo luego.
     // Comando Concreto de Escritura
     writeText: (state, action: PayloadAction<string>) => {
       state.history.push(state.text); // Guardar estado para deshacer
@@ -516,6 +518,7 @@ public class EqualsExpression implements SQLFilterExpression {
     }
 }
 
+// EXPOSICIÓN: Menciona cómo la SUNAT usa esto para combinar reglas como \'Es renta de 4ta\' AND \'Supera los 4000 soles\'.
 // Expresión No Terminal: Operación lógica AND
 public class AndExpression implements SQLFilterExpression {
     private final SQLFilterExpression left;
@@ -567,9 +570,9 @@ public class Main {
     realCase: {
       descripcion: "El intérprete es común en motores de reglas empresariales y parseo de consultas dinámicas en tiempo de ejecución. Permite evaluar expresiones complejas e inyectar variables de contexto para procesamiento rápido.",
       ejemplos: [
-        "Spring Expression Language (SpEL) en Java para evaluar anotaciones dinámicamente.",
-        "Evaluadores de reglas de negocio complejas en gestores de flujo de trabajo (BPMN).",
-        "Parseo y compilación de expresiones RegEx en motores JavaScript/V8."
+        "SUNAT: Parseo de reglas dinámicas y fórmulas para el cálculo del Impuesto a la Renta de 4ta y 5ta categoría.",
+        "AFP Integra / Prima: Evaluación de reglas para calcular los aportes o la rentabilidad según fondos (Tipo 1, 2 o 3).",
+        "Spring Expression Language (SpEL) en Java."
       ],
       codigoResolucion: `// Evaluación dinámica de reglas usando Spring Expression Language (SpEL) en Java
 import org.springframework.expression.Expression;
@@ -736,9 +739,9 @@ public class Main {
     realCase: {
       descripcion: "El recorrido de conjuntos de datos es la base de las APIs de colecciones y lectura de datos masiva desde bases de datos (SQL Cursors, ResultSet). Evita cargar gigabytes de datos en la memoria a la vez cargando elementos secuencialmente.",
       ejemplos: [
-        "El bucle foreach de Java (detrás de bambalinas utiliza la interfaz java.util.Iterator).",
-        "Colecciones de Java como ArrayList, HashSet, HashMap y sus métodos iterator().",
-        "Los generadores de JavaScript/TypeScript (`yield` y el protocolo Iterable)."
+        "RENIEC: Recorrer secuencialmente el padrón de millones de ciudadanos sin cargar toda la base de datos en RAM.",
+        "ONPE: Iterar sobre las mesas de sufragio y votos a nivel nacional de forma paginada y segura.",
+        "El bucle foreach de Java o generadores en TypeScript."
       ],
       codigoResolucion: `// Procesamiento diferido de colecciones en Java usando Iterator de base de datos
 import java.sql.Connection;
@@ -754,6 +757,7 @@ public class DatabaseResultSetIterator {
             // El ResultSet actúa como un Iterator clásico
             ResultSet rs = stmt.executeQuery("SELECT id, name FROM users");
             
+            // EXPOSICIÓN: Comenta que esto previene que los servidores de RENIEC colapsen por falta de memoria RAM al leer a todos los peruanos.
             // Recorrido secuencial amortizado en memoria
             while (rs.next()) {
                 int id = rs.getInt("id");
@@ -906,9 +910,9 @@ public class Main {
     realCase: {
       descripcion: "Centraliza la lógica de mensajería asíncrona entre microservicios autónomos. En lugar de que el Microservicio A conozca las URLs REST del Microservicio B, C y D, todos envían eventos a un Broker centralizado de Kafka/RabbitMQ.",
       ejemplos: [
-        "Sistemas de chat grupal y mensajería instantánea: El servidor de chat actúa como mediador para retransmitir los mensajes.",
-        "Controladores de UI complejos (JavaFX, Swing, React): Un componente padre o un estado centralizado (Redux) maneja los eventos de todos los inputs.",
-        "Sistemas de control de tráfico aéreo."
+        "CORPAC (Aeropuerto Jorge Chávez): La torre de control actúa como mediador entre todos los aviones despegando y aterrizando.",
+        "Cámara de Compensación Electrónica (CCE): Actúa como mediador en las transferencias interbancarias entre bancos (BCP, Interbank, BBVA).",
+        "Yape a Plin: El switch transaccional que media entre los ecosistemas de ambos bancos."
       ],
       codigoResolucion: `// Configuración de un ruteador Kafka Producer como Mediador en Spring Boot
 import org.springframework.kafka.core.KafkaTemplate;
@@ -922,6 +926,7 @@ public class OrderEventMediator {
         this.kafkaTemplate = kafkaTemplate;
     }
 
+    // EXPOSICIÓN: Explica cómo la Cámara de Compensación Electrónica (CCE) peruana evita que cada banco tenga que conectarse a los demás uno por uno.
     // Centraliza la mensajería, desacoplando los servicios emisores de los receptores
     public void notifyOrderCreated(String orderId) {
         String eventPayload = "{ \\"orderId\\": \\"" + orderId + "\\", \\"status\\": \\"CREATED\\" }";
@@ -1073,9 +1078,9 @@ public class Main {
     realCase: {
       descripcion: "En sistemas interactivos de frontend, Memento permite registrar instantáneas previas de variables de estado complejas para habilitar atajos como deshacer o volver a la última versión antes de un fallo inesperado del sistema.",
       ejemplos: [
-        "Sistemas de guardado de estado en videojuegos (Quicksaves).",
-        "Implementación del historial de ediciones en editores gráficos o de texto.",
-        "Sistemas de transacciones de bases de datos para realizar Rollback si ocurre algún fallo."
+        "SUNARP: Guardar el estado de un borrador de constitución de empresa antes de firmarlo, para poder restaurarlo si la sesión expira.",
+        "Migraciones: Al llenar el formulario de pasaporte, guardar mementos del avance para evitar perder los datos si falla el pago de Págalo.pe.",
+        "Sistemas de transacciones bancarias para realizar Rollback si el cajero GlobalNet falla."
       ],
       codigoResolucion: `// Custom React Hook en TypeScript para deshacer estados complejos (Memento)
 import { useState } from "react";
@@ -1089,6 +1094,7 @@ export function useHistoryState<T>(initialValue: T) {
     setState(newValue);
   };
 
+  // EXPOSICIÓN: Enfatiza que gracias a esto, un usuario en SUNARP no pierde su progreso de horas si se corta el internet.
   const undo = () => {
     if (mementos.length === 0) return;
     const previous = mementos[mementos.length - 1];
@@ -1204,14 +1210,15 @@ public class Main {
     realCase: {
       descripcion: "Utilizado para suscribir callbacks a eventos del ciclo de vida del DOM o flujos de streaming asíncronos de datos de red, evitando el consumo ineficiente de recursos de polling.",
       ejemplos: [
-        "Manejo de eventos en JavaScript/DOM: addEventListener() añade observadores para escuchar clicks o teclas.",
-        "Programación Reactiva con RxJS / ReactiveX (Observables y Observers).",
-        "React: El sistema de renderizado de componentes que observan cambios de estado (useState, Redux, Context API)."
+        "SISMATE (Indeci) / IGP: Suscripción de celulares a nivel nacional para recibir alertas de sismo.",
+        "Yape / Interbank App: Notificaciones Push automáticas (Observadores) cuando recibes un depósito (Sujeto).",
+        "El Comercio / Gestión: Suscriptores que reciben correos automáticamente con noticias de última hora."
       ],
       codigoResolucion: `// Registro de EventListener (Observer) nativo en un Servidor Node.js
 const EventEmitter = require('events');
 const orderEmitter = new EventEmitter();
 
+// EXPOSICIÓN: Compara esto con cómo tu celular (Observador) recibe el SMS de SISMATE cuando el IGP (Sujeto) detecta un sismo.
 // Observador 1: Registrar Logs
 orderEmitter.on('order_placed', (orderId) => {
   console.log(\`[Logger] Pedido \${orderId} registrado en auditoría.\`);
@@ -1368,9 +1375,9 @@ public class Main {
     realCase: {
       descripcion: "Utilizado en la automatización de flujos de aprobación complejos de documentos y de compras donde la lógica de validación difiere radicalmente según la fase activa del objeto.",
       ejemplos: [
-        "Máquinas expendedoras físicas e interfaces de cajero automático (ATM).",
-        "Sistemas de gestión de pedidos (E-commerce): Carrito -> Procesando -> Enviado -> Entregado.",
-        "Inteligencia Actorial de enemigos en videojuegos: Patrullar -> Perseguir -> Atacar -> Huir."
+        "Tambo Delivery / Falabella: Seguimiento de pedido (Recibido -> Preparando -> En camino -> Entregado).",
+        "Cajeros GlobalNet o BCP: La máquina de estados cambia según si la tarjeta está insertada, el PIN es válido o falta saldo.",
+        "Procesos judiciales en el Poder Judicial del Perú: Expediente (Mesa de Partes -> Juzgado -> Apelación -> Sentencia)."
       ],
       codigoResolucion: `// Implementación de Máquina de Estados usando Spring StateMachine en Java
 import org.springframework.statemachine.StateMachine;
@@ -1380,6 +1387,7 @@ public class SpringStateMachineConfig {
     public StateMachine<String, String> buildMachine() throws Exception {
         StateMachineBuilder.Builder<String, String> builder = StateMachineBuilder.builder();
 
+        // EXPOSICIÓN: Usa el ejemplo de Falabella: si el estado es \'EN_CAMINO\', el cliente ya no puede cancelar el pedido mágicamente.
         // 1. Configurar Estados
         builder.configureStates()
             .withStates()
@@ -1515,9 +1523,9 @@ public class Main {
     realCase: {
       descripcion: "Permite estructurar pasarelas de facturación globales donde el cálculo de retenciones o método de cobro varía según la geolocalización o el tipo de cliente sin alterar la clase del flujo de caja.",
       ejemplos: [
-        "Pasarelas de pago múltiples en sistemas e-commerce (Stripe, PayPal, Apple Pay, MercadoPago).",
-        "Algoritmos de ordenamiento intercambiables (Sort) según el tamaño del array.",
-        "Compresión de archivos: Elegir dinámicamente entre algoritmos ZIP, GZIP o TAR."
+        "Pasarelas de Pago en Perú: Niubiz (Visa/MC), PagoEfectivo (Código), Yape/Plin (QR). El comercio elige la estrategia dinámica.",
+        "Rutas de Lima / Waze en Lima: Estrategia de calcular ruta rápida evitando tráfico, peajes o zonas peligrosas.",
+        "Cálculo de envíos por Olva Courier, Shalom o Serpost según el destino y peso del paquete."
       ],
       codigoResolucion: `// Ruteador dinámico de pasarelas de pago usando Strategy en Java con inyección de Spring
 import org.springframework.stereotype.Service;
@@ -1536,6 +1544,7 @@ public class BillingProcessor {
         this.gateways = gateways;
     }
 
+    // EXPOSICIÓN: Explica cómo un E-commerce peruano inyecta PagoEfectivo, Yape o Niubiz dinámicamente sin llenar su código de "if-else".
     public void checkout(String gatewayType, double amount) {
         PaymentGateway strategy = gateways.get(gatewayType);
         if (strategy == null) {
@@ -1593,6 +1602,7 @@ public class BillingProcessor {
     ],
     javaCode: `// Ejemplo Realista: Pipeline ETL (Extract, Transform, Load) de Archivos
 public abstract class ETLDataPipeline {
+    // EXPOSICIÓN: Explica que aquí está el esqueleto inalterable, como el proceso de matrícula de la UNI que todos deben seguir.
     // Método Plantilla
     public final void runETL() {
         extract();
@@ -1654,9 +1664,9 @@ public class Main {
     realCase: {
       descripcion: "El patrón de método plantilla es la base estructural del ciclo de consultas en base de datos de librerías como JDBC (JdbcTemplate). El framework prepara la conexión y libera recursos, y tú inyectas sólo la query.",
       ejemplos: [
-        "Frameworks de pruebas como JUnit (los métodos setUp(), tearDown() se ejecutan bajo un flujo de plantilla predefinido).",
-        "Servlets de Java (HttpServlet): El método service() define la plantilla que llama a doGet() o doPost().",
-        "React Component Lifecycle: Métodos como componentDidMount() son ganchos (hooks) que el framework ejecuta en un orden estricto."
+        "UNI / San Marcos: Proceso de matrícula de alumnos (el esqueleto es el mismo, pero el cálculo de pago o validación de cursos varía por facultad).",
+        "SUNAT: Proceso de declaración jurada, donde los pasos son iguales pero varían las deducciones para Renta de 4ta vs 5ta.",
+        "React Component Lifecycle: Métodos como componentDidMount() son ganchos (hooks)."
       ],
       codigoResolucion: `// Implementación típica del patrón en el framework Spring (JdbcTemplate Query)
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -1671,6 +1681,7 @@ public class UserRowMapperRepository {
 
     public void printUserNames() {
         // JdbcTemplate maneja abrir conexión, preparar statement, manejar errores y cerrar conexión (Template Method)
+        // EXPOSICIÓN: Explica que aquí está el esqueleto inalterable, como el proceso de matrícula de la UNI que todos deben seguir.
         // El cliente solo define el mapeo del registro concreto (Concrete step callback)
         jdbcTemplate.query("SELECT id, username FROM users", (rs, rowNum) -> {
             System.out.println("Usuario mapeado: " + rs.getString("username"));
@@ -1753,6 +1764,7 @@ public interface ASTVisitor {
     void visitClass(ClassNode node);
 }
 
+// EXPOSICIÓN: Haz la analogía con los inspectores de SUNAT visitando empresas sin cambiar el rubro de las mismas.
 // Analizador Linter de Reglas de Nomenclatura
 public class NamingConventionLinter implements ASTVisitor {
     @Override
@@ -1793,9 +1805,9 @@ public class Main {
     realCase: {
       descripcion: "El compilador e intérprete de Javascript (Babel) recorre el árbol sintáctico abstracto (AST) de tu código usando un objeto Visitor para realizar transpilación de ES6 a ES5 o análisis de linters.",
       ejemplos: [
-        "Compiladores y analizadores de código: Operaciones de optimización o generación de código sobre el árbol de sintaxis abstracta (AST).",
-        "Motores de renderizado de UI para calcular dimensiones, dibujar elementos o exportar a otros formatos.",
-        "Sistemas de análisis de estructuras de documentos (por ejemplo, exportar HTML/XML a PDF)."
+        "Auditores de SUNAT: Visitan diferentes tipos de empresas (MYPE, Régimen General) y ejecutan diferentes estrategias de auditoría sin cambiar el código de la empresa.",
+        "Inspectores de INDECI: Visitan locales comerciales para verificar aforos y rutas de escape según el tipo de local.",
+        "Sistemas de exportación de documentos de la ONPE."
       ],
       codigoResolucion: `// Implementación de un plugin de Babel usando un Visitor en JavaScript
 module.exports = function (babel) {

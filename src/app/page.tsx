@@ -37,7 +37,7 @@ export default function Home() {
         <p className="text-xl text-slate-500 dark:text-indigo-300 font-semibold tracking-wide">
           Behavioral Design Patterns — Catálogo GoF (Gang of Four)
         </p>
-        <p className="text-slate-650 dark:text-slate-400 max-w-3xl text-base leading-relaxed">
+        <p className="text-slate-600 dark:text-slate-400 max-w-3xl text-base leading-relaxed">
           Los patrones de comportamiento se centran en los algoritmos y la asignación de responsabilidades entre objetos. No solo describen patrones de objetos o clases, sino también los patrones de comunicación entre ellos. Estos patrones caracterizan flujos de control complejos que son difíciles de seguir en tiempo de ejecución.
         </p>
         <div className="pt-4">
@@ -111,7 +111,7 @@ export default function Home() {
             <div className="space-y-1">
               <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">1994</span>
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">Publicación del Libro Oficial</h3>
-              <p className="text-sm text-slate-550 dark:text-slate-400 leading-relaxed">
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                 Erich Gamma, Richard Helm, Ralph Johnson y John Vlissides (conocidos como la <strong>Gang of Four</strong> o <strong>GoF</strong>) publican <em>"Design Patterns: Elements of Reusable Object-Oriented Software"</em>, sentando las bases modernas de la ingeniería de software y catalogando los 23 patrones clásicos.
               </p>
             </div>
@@ -124,7 +124,7 @@ export default function Home() {
             <div className="space-y-1">
               <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">Años 2000 - 2010</span>
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">Adopción Masiva en Frameworks</h3>
-              <p className="text-sm text-slate-550 dark:text-slate-400 leading-relaxed">
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                 Frameworks empresariales como Spring (Java), .NET Framework (C#) y posteriormente Express.js adoptan los patrones como estándar de desarrollo. Patrones como <em>Observer</em> y <em>Chain of Responsibility</em> se vuelven indispensables para manejar middleware y flujos reactivos.
               </p>
             </div>
@@ -137,7 +137,7 @@ export default function Home() {
             <div className="space-y-1">
               <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">Presente</span>
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">Era de la Reactividad y Microservicios</h3>
-              <p className="text-sm text-slate-550 dark:text-slate-400 leading-relaxed">
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                 Con el auge de JavaScript/TypeScript, React y la programación reactiva (RxJS), los patrones de comportamiento evolucionan. Siguen siendo un pilar clave en arquitecturas de backend distribuidos y la gestión de estado frontend moderna.
               </p>
             </div>

@@ -55,7 +55,7 @@ export default function Sidebar() {
           placeholder="Buscar patrón..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-850 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/10 focus:border-indigo-500 dark:text-slate-200 dark:placeholder-slate-500 transition-all"
+          className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/10 focus:border-indigo-500 dark:text-slate-200 dark:placeholder-slate-500 transition-all"
         />
       </div>
 
@@ -69,7 +69,7 @@ export default function Sidebar() {
         </NavLink>
 
         {/* Separador - Patrones */}
-        <div className="mt-4 mb-2 px-3 text-xs font-semibold text-slate-400 dark:text-slate-550 uppercase tracking-wider">
+        <div className="mt-4 mb-2 px-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
           Patrones de Comportamiento
         </div>
         
@@ -99,7 +99,21 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* No extras */}
+        {/* Módulos de Cierre */}
+        <div className="mt-6 mb-2 px-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+          Cierre y Resumen
+        </div>
+        <div className="flex flex-col gap-1 pr-1">
+          <NavLink href="/conclusiones" icon={BookOpen} onClick={() => setIsOpen(false)}>
+            Conclusiones Generales
+          </NavLink>
+          <NavLink href="/recomendaciones" icon={BookOpen} onClick={() => setIsOpen(false)}>
+            Recomendaciones de Uso
+          </NavLink>
+          <NavLink href="/bibliografia" icon={BookOpen} onClick={() => setIsOpen(false)}>
+            Bibliografía y Referencias
+          </NavLink>
+        </div>
       </div>
     </div>
   );
